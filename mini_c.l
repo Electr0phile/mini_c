@@ -1,0 +1,39 @@
+%{
+
+/* a small subset of c language */
+
+#include "y.tab.h"
+
+%}
+%%
+
+[ \t]+
+
+int |
+float           {
+                    /* detect a type */
+                    yylval.type = (char*) malloc(sizeof(yytext) + 1);
+                    strcpy(yylval.type, yytext);
+                    return TYPE;
+                }
+
+0 |
+[1-9][0-9]*     {
+                    /* detect integer number */
+                    yylval.integer = atoi(yytext);
+                    return INTEGER;
+                }
+
+[a-z][a-z0-9]*  {
+                    /* detect arbitrary variable */
+                    yylval.variable = (char*) malloc(sizeof(yytext) + 1);
+                    strcpy(yylval.variable, yytext);
+                    return VARIABLE;
+                }
+
+; |
+=               {   return yytext[0];   }
+
+.|\n
+
+%%
