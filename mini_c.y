@@ -4,6 +4,7 @@
 
 /* define a union of values for a node */
 union node_value {
+    void *null;
     int integer;
     char *variable;
 };
@@ -42,11 +43,7 @@ int dfs(struct node *n);
 root:           body                            {
                                                     struct node ** children = (struct node **) malloc(sizeof(struct node *));
                                                     children[0] = $1;
-                                                    printf("Root child: %p\n", $1);
-                                                    printf("Root child type: %s\n", $1->type);
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    root = add_node("root", v, 1, children);
+                                                    root = add_node("root", (union node_value) NULL, 1, children);
                                                 }
     ;
 
@@ -54,62 +51,38 @@ body:           line body                       {
                                                     struct node ** children = (struct node **) malloc(sizeof(struct node *) * 2);
                                                     children[0] = $1;
                                                     children[1] = $2;
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    $$ = add_node("body", v, 2, children);
+                                                    $$ = add_node("body", (union node_value) NULL, 2, children);
                                                 }
     |           /* empty */                     {
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    $$ = add_node("body", v, 0, NULL);
+                                                    $$ = add_node("body", (union node_value) NULL, 0, NULL);
                                                 }
     ;
 
 line:           declaration                     {
                                                     struct node ** children = (struct node **) malloc(sizeof(struct node *));
                                                     children[0] = $1;
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    $$ = add_node("line", v, 1, children);
+                                                    $$ = add_node("line", (union node_value) NULL, 1, children);
                                                 }
     |           assignment                      {
                                                     struct node ** children = (struct node **) malloc(sizeof(struct node *));
                                                     children[0] = $1;
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    $$ = add_node("line", v, 1, children);
+                                                    $$ = add_node("line", (union node_value) NULL, 1, children);
                                                 }
     ;
 
 declaration:    TYPE VARIABLE ';'               {
-                                                    union node_value v;
-                                                    v.integer = 0;
-                                                    $$ = add_node("declaration", v, 0, NULL);
+                                                    $$ = add_node("declaration", (union node_value) NULL, 0, NULL);
                                                 }
            ;
 
 assignment:     VARIABLE '=' expression ';'     {
-                                                    struct node ** children = (struct node **) malloc(sizeof(struct node *) * 2);
-                                                    union node_value v;
-                                                    strcpy(v.variable, yylval.variable);
-                                                    struct node * variable_node = add_node("variable", v, 0, NULL);
-                                                    children[0] = variable_node;
-                                                    children[1] = $3;
-                                                    $$ = add_node("assignment", v, 2, children);
+                                                    $$ = add_node("assignment", (union node_value) NULL, 0, NULL);
                                                 }
           ;
 
-expression:     VARIABLE                        {
-                                                    union node_value v;
-                                                    strcpy(v.variable, yylval.variable);
-                                                    $$ = add_node("variable", v, 0, NULL);
-                                                }
-    |           INTEGER                         {
-                                                    union node_value v;
-                                                    v.integer = yylval.integer;
-                                                    $$ = add_node("integer", v, 0, NULL);
-                                                }
-    ;
+expression:     VARIABLE
+          |     INTEGER
+          ;
 
 %%
 
@@ -120,7 +93,9 @@ struct node * add_node (char *node_type, union node_value value, int number_of_c
     struct node *new_node;
     new_node = (struct node *) malloc(sizeof(struct node));
     strcpy(new_node->type, node_type);
-    new_node->value = value;
+    if (value.null != NULL) {
+        new_node->value = value;
+    }
     new_node->number_of_children = number_of_children;
     new_node->children = children;
 
