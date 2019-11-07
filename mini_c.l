@@ -26,7 +26,7 @@ float           {
 
 [a-z][a-z0-9]*  {
                     /* detect arbitrary variable */
-                    yylval.variable = (char*) malloc(sizeof(yytext) + 1);
+                    /* CAREFUL: if variable size is longer than 20 there will be segfault */
                     strcpy(yylval.variable, yytext);
                     return VARIABLE;
                 }

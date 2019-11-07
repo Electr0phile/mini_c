@@ -6,7 +6,7 @@
 union node_value {
     void *null;
     int integer;
-    char *variable;
+    char variable[20];
 };
 
 /* define a tree node for an AST */
@@ -27,7 +27,7 @@ int dfs(struct node *n);
 
 %union {
     int integer;
-    char *variable;
+    char variable[20];
     char *type;
     struct node * nodetype;
 }
@@ -76,12 +76,25 @@ declaration:    TYPE VARIABLE ';'               {
            ;
 
 assignment:     VARIABLE '=' expression ';'     {
-                                                    $$ = add_node("assignment", (union node_value) NULL, 0, NULL);
+                                                    struct node ** children = (struct node **) malloc(sizeof(struct node *) * 2);
+                                                    union node_value v;
+                                                    strcpy(v.variable, $1);
+                                                    children[0] = add_node("variable", v, 0, NULL);
+                                                    children[1] = $3;
+                                                    $$ = add_node("assignment", (union node_value) NULL, 2, children);
                                                 }
           ;
 
-expression:     VARIABLE
-          |     INTEGER
+expression:     VARIABLE                        {
+                                                    union node_value v;
+                                                    strcpy(v.variable, yylval.variable);
+                                                    $$ = add_node("variable", v, 0, NULL);
+                                                }
+          |     INTEGER                         {
+                                                    union node_value v;
+                                                    v.integer = yylval.integer;
+                                                    $$ = add_node("integer", v, 0, NULL);
+                                                }
           ;
 
 %%
