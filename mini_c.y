@@ -128,34 +128,34 @@ struct node * add_node (char *node_type, union node_value value, int number_of_c
 
 int dfs(struct node *n)
 {
-    printf("\"%s\" :", n->type);
+    printf("\"%s\":", n->type);
 
 
     if (n->number_of_children > 0) {
-        printf(" { ");
+        printf("{");
         struct node * child;
         for (int i=0; i<(n->number_of_children); i++) {
             if (i != 0) {
                 printf(",");
             }
-            printf(" ");
+            printf("");
             child = n->children[i];
             dfs(child);
         }
-        printf(" } ");
+        printf("}");
     }
 
     if (strcmp(n->type, "type")==0) {
-        printf(" \"%s\"", n->value.type);
+        printf("\"%s\"", n->value.type);
     }
     if (strcmp(n->type, "variable")==0) {
-        printf(" \"%s\"", n->value.variable);
+        printf("\"%s\"", n->value.variable);
     }
     if (strcmp(n->type, "integer")==0) {
-        printf(" %d", n->value.integer);
+        printf("%d", n->value.integer);
     }
     if (strcmp(n->type, "body")==0 && n->number_of_children==0) {
-        printf(" null");
+        printf("null");
     }
 
     return 0;
@@ -168,9 +168,9 @@ main()
 
     yyparse();
 
-    printf("{ ");
+    printf("{");
     dfs(root);
-    printf(" }");
+    printf("}");
 
 }
 
