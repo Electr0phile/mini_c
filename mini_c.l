@@ -12,7 +12,6 @@
 int |
 float           {
                     /* detect a type */
-                    yylval.type = (char*) malloc(sizeof(yytext) + 1);
                     strcpy(yylval.type, yytext);
                     return TYPE;
                 }

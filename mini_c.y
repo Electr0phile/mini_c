@@ -7,6 +7,7 @@ union node_value {
     void *null;
     int integer;
     char variable[20];
+    char type[20];
 };
 
 /* define a tree node for an AST */
@@ -28,7 +29,7 @@ int dfs(struct node *n);
 %union {
     int integer;
     char variable[20];
-    char *type;
+    char type[20];
     struct node * nodetype;
 }
 
@@ -71,7 +72,16 @@ line:           declaration                     {
     ;
 
 declaration:    TYPE VARIABLE ';'               {
-                                                    $$ = add_node("declaration", (union node_value) NULL, 0, NULL);
+                                                    struct node ** children = (struct node **) malloc(sizeof(struct node *) * 2);
+
+                                                    union node_value v1;
+                                                    strcpy(v1.type, $1);
+                                                    children[0] = add_node("type", v1, 0, NULL);;
+
+                                                    union node_value v2;
+                                                    strcpy(v2.variable, $2);
+                                                    children[1] = add_node("variable", v2, 0, NULL);
+                                                    $$ = add_node("declaration", (union node_value) NULL, 2, children);
                                                 }
            ;
 
@@ -118,15 +128,35 @@ struct node * add_node (char *node_type, union node_value value, int number_of_c
 
 int dfs(struct node *n)
 {
-    printf("{ %s : ", n->type);
+    printf("\"%s\" :", n->type);
 
-    struct node * child;
-    for (int i=0; i<(n->number_of_children); i++) {
-        child = n->children[i];
-        dfs(child);
+
+    if (n->number_of_children > 0) {
+        printf(" { ");
+        struct node * child;
+        for (int i=0; i<(n->number_of_children); i++) {
+            if (i != 0) {
+                printf(",");
+            }
+            printf(" ");
+            child = n->children[i];
+            dfs(child);
+        }
+        printf(" } ");
     }
 
-    printf(" }");
+    if (strcmp(n->type, "type")==0) {
+        printf(" \"%s\"", n->value.type);
+    }
+    if (strcmp(n->type, "variable")==0) {
+        printf(" \"%s\"", n->value.variable);
+    }
+    if (strcmp(n->type, "integer")==0) {
+        printf(" %d", n->value.integer);
+    }
+    if (strcmp(n->type, "body")==0 && n->number_of_children==0) {
+        printf(" null");
+    }
 
     return 0;
 }
@@ -138,7 +168,9 @@ main()
 
     yyparse();
 
+    printf("{ ");
     dfs(root);
+    printf(" }");
 
 }
 
