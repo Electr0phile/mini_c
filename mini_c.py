@@ -78,7 +78,7 @@ def p_function_list_empty(p):
 # At this level we parse a function. Function is
 #  represented by a dictionary with following fields:
 #  'function_name' - name of function
-#  'linespan' - tuple of first and las line of function
+#  'span' - tuple of first and las line of function
 #  'return_type' - type of return value
 #  'arguments' - list of arguments, it may either be
 #   a list of types or a list of dicts ('type', 'variable')
@@ -127,7 +127,7 @@ def p_body_empty(p):
 ### Line level ###
 
 # Here various types of lines are defined
-#  Any line has a field 'linespan' which consists of
+#  Any line has a field 'span' which consists of
 #  a tuple of numbers, first being a code line at which
 #  the line begins and last being a code line at which
 #  the line ends.
@@ -136,15 +136,15 @@ def p_body_empty(p):
 
 def p_line_declaration(p):
     'line : declaration'
-    p[0] = { 'linespan': p[1][0], 'declaration' : p[1][1] }
+    p[0] = { 'span': p[1][0], 'type':'declaration', 'value' : p[1][1] }
 
 def p_line_assignment(p):
     'line : assignment'
-    p[0] = { 'linespan' : p[1][0], 'assignment' : p[1][1] }
+    p[0] = { 'span' : p[1][0], 'type':'assignment', 'value' : p[1][1] }
 
 def p_line_if_clause(p):
     'line : if_clause'
-    p[0] = { 'linespan' : p[1]['linespan'], 'if_clause' : p[1] }
+    p[0] = { 'span' : p[1]['span'], 'type':'if_clause', 'value' : p[1] }
 
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
@@ -266,25 +266,15 @@ def p_expr_6(p):
 
 ### If statements ###
 
-def p_bool_expr(p):
-    '''
-    bool_expr : INTEGER '>' INTEGER
-              | INTEGER '<' INTEGER
-    '''
-    p[0] = ( p[2], p[1], p[3] )
-
-
 def p_if_only(p):
     '''
-    if_clause : IF '(' bool_expr ')' '{' body '}'
+    if_clause : IF '(' expr_1 ')' '{' body '}'
     '''
     p[0] = {
-            'bool_expr' : p[3],
-            'linespan' : (p.lineno(1), p.lineno(7)),
+            'expr' : p[3],
+            'span' : (p.lineno(1), p.lineno(7)),
             'body' : p[6],
             }
-
-
 
 
 
@@ -299,13 +289,20 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 data = \
-"""
-int main(int, float){ \n \
-    a = b+++c++; \n \
+"""float sum(float first, float second) { \n \
+    result = first + second; \n \
+} \n \
+
+int main(void){ \n \
+    int a,b,c; \n \
+    a = b * c - 10; \n \
+    if (a > 10) { \n \
+        b = 4; \n \
+    } \n \
 }
 """
 
-parser.parse(data)
+parser.parse(data, tracking=True)
 
 import json
-print(json.dumps(AST, indent=4))
+print(json.dumps(AST, indent=2))
