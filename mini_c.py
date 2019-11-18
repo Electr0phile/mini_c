@@ -1,22 +1,30 @@
 # Tokens
 
-t_SEMICOLON = r';'
-t_EQUALS    = r'='
 t_INTEGER   = r'[1-9][0-9]*'
 
+# Literals are used in productions as is
+literals = "{}(),;="
+
+# All types are treated as TYPE tokens
 reserved = {
-            'int' : 'INT_TYPE',
-            'float' : 'FLOAT_TYPE',
+            'int' : 'TYPE',
+            'float' : 'TYPE',
+            'void' : 'TYPE',
         }
 
 tokens = [
-        'INTEGER', 'ID',
-        'SEMICOLON', 'EQUALS', 'VARIABLE',
+        'INTEGER',
+        'VARIABLE',
         ] + list(reserved.values())
 
+# Since types are captured by variable regexp,
+#  we have to define a separate type ID that resolves
+#  this conflict inside its definition
 def t_ID(t):
     r'[a-zA-Z_][a-zA-Z_0-9]*'
-    t.type = reserved.get(t.value,'VARIABLE')    # Check for reserved words
+    # If value of t is one of reserved values, return TYPE
+    #  else return VARIABLE
+    t.type = reserved.get(t.value,'VARIABLE')
     return t
 
 
@@ -43,23 +51,83 @@ lexer = lex.lex()
 
 # Parsing rules
 
-AST = {}
+# Root structure of abstract synthax tree is a list of function definitions
+AST = []
 
-def p_main_body(p):
-    'main : body'
-    AST['main'] = { 'body' : p[1] }
+### Function list level ###
 
-def p_empty(p):
-    'empty : '
+# At the top level of AST we simply parse
+#  a list of function declarations
+
+def p_function_list(p):
+    ' function_list : function function_list '
+    AST.insert(0, p[1])
+
+def p_function_list_empty(p):
+    ' function_list : empty '
     pass
+
+
+### Function definition level ###
+
+# At this level we parse a function. Function is
+#  represented by a dictionary with following fields:
+#  'function_name' - name of function
+#  'linespan' - tuple of first and las line of function
+#  'return_type' - type of return value
+#  'arguments' - list of arguments, it may either be
+#   a list of types or a list of dicts ('type', 'variable')
+#  'body' - list of lines
+
+def p_function_body(p):
+    ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
+    p[0] = {
+            'function_name': p[2],
+            'linespan': (p.lineno(1), p.lineno(8)),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_argunments_names_one(p):
+    ''' arguments : TYPE VARIABLE '''
+    p[0] = [{ 'type': p[1], 'variable': p[2] }]
+
+def p_arguments_names_recursion(p):
+    ''' arguments : TYPE VARIABLE ',' arguments '''
+    p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
+
+def p_argunments_types_one(p):
+    ''' arguments : TYPE '''
+    p[0] = [{ 'type': p[1] }]
+
+def p_arguments_types_recursion(p):
+    ''' arguments : TYPE ',' arguments '''
+    p[0] = [{ 'type': p[1]}] + p[3]
+
+
+### Function body level ###
+
+# Function body consists of a list of lines
 
 def p_body_line_body(p):
     'body : line body'
-    p[0] = { 'line': p[1], 'body': p[2] }
+    p[0] = [p[1]] + p[2]
 
 def p_body_empty(p):
     'body : empty'
-    p[0] = None
+    p[0] = []
+
+
+### Line level ###
+
+# Here various types of lines are defined
+#  Any line has a field 'linespan' which consists of
+#  a tuple of numbers, first being a code line at which
+#  the line begins and last being a code line at which
+#  the line ends.
+#  These are made so that the debugger could execute the line
+#  only after it ends in the source code.
 
 def p_line_declaration(p):
     'line : declaration'
@@ -70,11 +138,19 @@ def p_line_assignment(p):
     p[0] = { 'linespan' : p[1][0], 'assignment' : p[1][1] }
 
 def p_declaration(p):
-    'declaration : type VARIABLE SEMICOLON'
-    p[0] = ( (p[1][0], p.lineno(3)), { 'type' : p[1][1], 'variable': p[2] })
+    '''declaration : TYPE variable_list ';' '''
+    p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
+
+def p_variable_list_one(p):
+    'variable_list : VARIABLE'
+    p[0] = [p[1]]
+
+def p_variable_list_recursion(p):
+    '''variable_list : VARIABLE ',' variable_list '''
+    p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
-    'assignment : VARIABLE EQUALS expression SEMICOLON'
+    '''assignment : VARIABLE '=' expression ';' '''
     p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
 
 def p_expression_variable(p):
@@ -86,10 +162,9 @@ def p_expression_integer(p):
     'expression : INTEGER'
     p[0] = { 'integer' : p[1] }
 
-def p_type(p):
-    'type : INT_TYPE'
-    '     | FLOAT_TYPE'
-    p[0] = ( p.lineno(1), p[1] )
+def p_empty(p):
+    'empty : '
+    pass
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -97,9 +172,17 @@ def p_error(t):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-data = open('test.txt', 'r')
+data = \
+"""
+int sum(int a, int b) { asdf = 10; } \n \
+\n \
+int main(int, float){ \n \
+    int a,b,c; \n \
+    a = 10; \n \
+}
+"""
 
-parser.parse(data.read())
+parser.parse(data)
 
 import json
 print(json.dumps(AST, indent=4))
