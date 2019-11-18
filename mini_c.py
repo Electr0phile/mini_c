@@ -1,20 +1,25 @@
 # Tokens
 
 t_INTEGER   = r'[1-9][0-9]*'
+t_INCR      = r'\+\+'
+t_PLUS      = r'\+'
 
 # Literals are used in productions as is
-literals = "{}(),;="
+literals = "{}(),;=><-*/"
 
 # All types are treated as TYPE tokens
 reserved = {
             'int' : 'TYPE',
             'float' : 'TYPE',
             'void' : 'TYPE',
+            'if'    : 'IF',
         }
 
 tokens = [
         'INTEGER',
         'VARIABLE',
+        'PLUS',
+        'INCR',
         ] + list(reserved.values())
 
 # Since types are captured by variable regexp,
@@ -83,7 +88,7 @@ def p_function_body(p):
     ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
     p[0] = {
             'function_name': p[2],
-            'linespan': (p.lineno(1), p.lineno(8)),
+            'span': (p.lineno(1), p.lineno(8)),
             'return_type': p[1],
             'arguments': p[4],
             'body' : p[7],
@@ -137,6 +142,10 @@ def p_line_assignment(p):
     'line : assignment'
     p[0] = { 'linespan' : p[1][0], 'assignment' : p[1][1] }
 
+def p_line_if_clause(p):
+    'line : if_clause'
+    p[0] = { 'linespan' : p[1]['linespan'], 'if_clause' : p[1] }
+
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
     p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
@@ -150,17 +159,134 @@ def p_variable_list_recursion(p):
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
-    '''assignment : VARIABLE '=' expression ';' '''
+    '''assignment : VARIABLE '=' expr_1 ';' '''
     p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
 
-def p_expression_variable(p):
-    'expression : VARIABLE'
-    print(p.type)
-    p[0] = { 'variable' : p[1] }
 
-def p_expression_integer(p):
-    'expression : INTEGER'
-    p[0] = { 'integer' : p[1] }
+
+
+
+### Expression handler ###
+
+def p_expr_1_lr(p):
+    '''
+    expr_1 : expr_2 '>' expr_1
+           | expr_2 '<' expr_1
+    '''
+    p[0] = {
+            'op' : p[2],
+            'left' : p[1],
+            'right' : p[3],
+            }
+
+def p_expr_1_2(p):
+    '''
+    expr_1 : expr_2
+    '''
+    p[0] = p[1]
+
+def p_expr_2_lr(p):
+
+    '''
+    expr_2 : expr_3 PLUS expr_2
+           | expr_3 '-' expr_2
+    '''
+    p[0] = {
+            'op' : p[2],
+            'left' : p[1],
+            'right' : p[3],
+            }
+
+def p_expr_2_3(p):
+    '''
+    expr_2 : expr_3
+    '''
+    p[0] = p[1]
+
+def p_expr_3_lr(p):
+
+    '''
+    expr_3 : expr_4 '*' expr_3
+           | expr_4 '/' expr_3
+    '''
+    p[0] = {
+            'op' : p[2],
+            'left' : p[1],
+            'right' : p[3],
+            }
+
+def p_expr_3_4(p):
+    '''
+    expr_3 : expr_4
+    '''
+    p[0] = p[1]
+
+def p_expr_4(p):
+    '''
+    expr_4 : '-' expr_5
+           | expr_5
+    '''
+    if p[1] == '-':
+        p[0] = {
+                'op' : p[1],
+                'left' : None,
+                'right' : p[2],
+                }
+    else:
+        p[0] = p[1]
+
+def p_expr_5_incr(p):
+    '''
+    expr_5 : VARIABLE INCR
+    '''
+    p[0] = {
+            'op' : p[2],
+            'left' : p[1],
+            'right' : None,
+            }
+
+def p_expr_5_6(p):
+    '''
+    expr_5 : expr_6
+    '''
+    p[0] = p[1]
+
+
+def p_expr_6(p):
+    '''
+    expr_6 : INTEGER
+           | VARIABLE
+           | '(' expr_1 ')'
+    '''
+    if p[1] == '(':
+        p[0] = p[2]
+    else:
+        p[0] = p[1]
+
+
+### If statements ###
+
+def p_bool_expr(p):
+    '''
+    bool_expr : INTEGER '>' INTEGER
+              | INTEGER '<' INTEGER
+    '''
+    p[0] = ( p[2], p[1], p[3] )
+
+
+def p_if_only(p):
+    '''
+    if_clause : IF '(' bool_expr ')' '{' body '}'
+    '''
+    p[0] = {
+            'bool_expr' : p[3],
+            'linespan' : (p.lineno(1), p.lineno(7)),
+            'body' : p[6],
+            }
+
+
+
+
 
 def p_empty(p):
     'empty : '
@@ -174,11 +300,8 @@ parser = yacc.yacc()
 
 data = \
 """
-int sum(int a, int b) { asdf = 10; } \n \
-\n \
 int main(int, float){ \n \
-    int a,b,c; \n \
-    a = 10; \n \
+    a = b+++c++; \n \
 }
 """
 
