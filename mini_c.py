@@ -1,15 +1,24 @@
-tokens = (
-        'INTEGER', 'VARIABLE', 'TYPE',
-        'SEMICOLON', 'EQUALS',
-        )
-
 # Tokens
 
-t_VARIABLE  = r'[a-zA-Z_][a-zA-Z0-9_]*'
-t_TYPE      = r'(int|float)'
 t_SEMICOLON = r';'
 t_EQUALS    = r'='
 t_INTEGER   = r'[1-9][0-9]*'
+
+reserved = {
+            'int' : 'INT_TYPE',
+            'float' : 'FLOAT_TYPE',
+        }
+
+tokens = [
+        'INTEGER', 'ID',
+        'SEMICOLON', 'EQUALS', 'VARIABLE',
+        ] + list(reserved.values())
+
+def t_ID(t):
+    r'[a-zA-Z_][a-zA-Z_0-9]*'
+    t.type = reserved.get(t.value,'VARIABLE')    # Check for reserved words
+    return t
+
 
 # Ignore
 
@@ -19,7 +28,7 @@ t_ignore = '\t '
 
 def t_newline(t):
     r'\n+'
-    t.lexer.lineno += t.value.count("\n")
+    t.lexer.lineno += len(t.value)
 
 # Error handling
 
@@ -36,9 +45,9 @@ lexer = lex.lex()
 
 AST = {}
 
-def p_root_body(p):
-    'root : body'
-    AST['root'] = p[1]
+def p_main_body(p):
+    'main : body'
+    AST['main'] = { 'body' : p[1] }
 
 def p_empty(p):
     'empty : '
@@ -54,27 +63,33 @@ def p_body_empty(p):
 
 def p_line_declaration(p):
     'line : declaration'
-    p[0] = { 'declaration' : p[1] }
+    p[0] = { 'linespan': p[1][0], 'declaration' : p[1][1] }
 
 def p_line_assignment(p):
     'line : assignment'
-    p[0] = { 'assignment' : p[1] }
+    p[0] = { 'linespan' : p[1][0], 'assignment' : p[1][1] }
 
 def p_declaration(p):
-    'declaration : TYPE VARIABLE SEMICOLON'
-    p[0] = { 'type' : p[1], 'variable': p[2] }
+    'declaration : type VARIABLE SEMICOLON'
+    p[0] = ( (p[1][0], p.lineno(3)), { 'type' : p[1][1], 'variable': p[2] })
 
 def p_assignment(p):
     'assignment : VARIABLE EQUALS expression SEMICOLON'
-    p[0] = { 'variable' : p[1], 'expression': p[3] }
+    p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
 
 def p_expression_variable(p):
     'expression : VARIABLE'
+    print(p.type)
     p[0] = { 'variable' : p[1] }
 
 def p_expression_integer(p):
     'expression : INTEGER'
     p[0] = { 'integer' : p[1] }
+
+def p_type(p):
+    'type : INT_TYPE'
+    '     | FLOAT_TYPE'
+    p[0] = ( p.lineno(1), p[1] )
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -82,10 +97,9 @@ def p_error(t):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-while True:
-    try:
-        s = input('> ')
-    except EOFError:
-        break
-    parser.parse(s)
-    print(AST)
+data = open('test.txt', 'r')
+
+parser.parse(data.read())
+
+import json
+print(json.dumps(AST, indent=4))
