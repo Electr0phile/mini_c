@@ -288,7 +288,9 @@ def p_error(t):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-data = \
+test_file = open("test.txt", "r")
+
+#data = \
 """float sum(float first, float second) { \n \
     result = first + second; \n \
 } \n \
@@ -301,7 +303,9 @@ int main(void){ \n \
     } \n \
 }
 """
-
+data = test_file.read();
+print(data);
+test_file.close();
 parser.parse(data, tracking=True)
 
 import json
