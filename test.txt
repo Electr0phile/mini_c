@@ -1,7 +1,13 @@
 int main (void) {
 	int a, b;
 	a = 4;
+	a = 7;
 	b = 5;
+	if (a + b > 5) {
+		b = 55;
+		int k;
+		k = b + a;
+	}
 	int c;
-	c = 4 + 5 * 6 + 6;
+	c = 4 + 5 * 6 + 6 + a + b;
 }
