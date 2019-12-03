@@ -333,20 +333,13 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 data = \
-"""float sum(float *first, float *second) { \n \
-    result = *first + second; \n \
-} \n \
-
-int main(void){ \n \
-    int a,b,*c; \n \
-    a = b * *c - 0; \n \
-    b = &c;
+"""int main(void){ \n \
+    int a,b,c; \n \
+    b = 2;
+    a = b + c;
     if (a<10) { \n \
         b = 4; \n \
     } \n \
-    for (i=0;j<1;k++) {
-        int asdf;
-    }
 }
 """
 
