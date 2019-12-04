@@ -12,7 +12,8 @@ addr_stack = [] #stack of nodes, used for implementing function call and return.
 rax = 0 #function return values stored here
 current_linenode = None
 
-#Class Declarations
+
+# Class Declarations
 class Function:	
 	def __init__(self, name, line_node, args):
 		self.name = name
@@ -24,7 +25,8 @@ class LineNode:
 	def __init__(self, lineno, optype):
 		self.lineno = lineno;
 		self.optype = optype;
-	def __str__ (self):
+
+	def __str__(self):
 		return str(self.lineno) + ' ' + str(self.optype);
 
 
@@ -32,31 +34,30 @@ class Assignment:
 	def __init__(self, var, expr):
 		self.var = var
 		self.expr = expr
-	def __str__ (self):
-		return ('Assignment' + ' ' + self.var)
+
+	def __str__(self):
+		return 'Assignment' + ' ' + self.var
+
 	def process(self):
-		if self.var in symbol_table == False:
+		if self.var not in symbol_table:
 			not_declared_error(self.var)
 		else:
 			memory_table[symbol_table[self.var]] = evaluate(self.expr)
 			history_table[self.var].append(memory_table[symbol_table[self.var]])
-		get_to_next_linenode();
+		get_to_next_linenode()
 
 
 class Expression:
 	def __init__(self, op, left, right):
-		if op == None:
-			self.op = None;
-			self.left = left;
-			self.right = None;
-		else:
-			self.op = op;
-			self.left = left;
-			self.right = right;
+		self.op = op;
+		self.left = left;
+		self.right = right;
+
 	def __str__(self):
 		return '\n' + str(self.op) + ' ' + str(self.left) + ' ' + str(self.right) + '\n';
 
-#Makes expression out of a dictionary
+
+# Makes expression out of a dictionary
 def get_expression(expr_dict):
 	if isinstance(expr_dict, str):
 		return Expression(None, expr_dict, None);
@@ -87,6 +88,7 @@ class IfClause:
 		self.expr = expr;
 		self.body = body;
 		self.visited = False
+
 	def __str__(self):
 		cur_str = 'IF CLAUSE'
 		#start = self.body[0];
