@@ -1,11 +1,11 @@
 # Tokens
 
-t_INTEGER   = r'[1-9][0-9]*'
+t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
 
 # Literals are used in productions as is
-literals = "{}(),;=><-*/"
+literals = "{}(),;=><-*/&"
 
 # All types are treated as TYPE tokens
 reserved = {
@@ -13,6 +13,7 @@ reserved = {
             'float' : 'TYPE',
             'void' : 'TYPE',
             'if'    : 'IF',
+            'for'    : 'FOR',
         }
 
 tokens = [
@@ -95,11 +96,11 @@ def p_function_body(p):
             }
 
 def p_argunments_names_one(p):
-    ''' arguments : TYPE VARIABLE '''
+    ''' arguments : TYPE variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
 
 def p_arguments_names_recursion(p):
-    ''' arguments : TYPE VARIABLE ',' arguments '''
+    ''' arguments : TYPE variable_or_pointer ',' arguments '''
     p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
 
 def p_argunments_types_one(p):
@@ -146,24 +147,54 @@ def p_line_if_clause(p):
     'line : if_clause'
     p[0] = { 'span' : p[1]['span'], 'type':'if_clause', 'value' : p[1] }
 
+def p_line_for_loop(p):
+    'line : for_loop'
+    p[0] = { 'span' : p[1]['span'], 'type':'for_loop', 'value' : p[1] }
+
+def p_line_assignment_error(p):
+    ''' line : error ';' '''
+    p[0] = { 'span' : p[1][0], 'type':'assignment', 'value' : p[1][1] }
+
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
     p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
 
+def p_declaration_error(p):
+    '''declaration : TYPE variable_list '''
+    print("Error in declaration: lack of semicolon!")
+    p[0] = ( (p.lineno(1), 0), { 'type' : p[1], 'variables': p[2] })
+
 def p_variable_list_one(p):
-    'variable_list : VARIABLE'
+    'variable_list : variable_or_pointer'
     p[0] = [p[1]]
 
 def p_variable_list_recursion(p):
-    '''variable_list : VARIABLE ',' variable_list '''
+    '''variable_list : variable_or_pointer ',' variable_list '''
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
-    '''assignment : VARIABLE '=' expr_1 ';' '''
+    '''assignment : variable_or_pointer '=' expr_1 ';' '''
     p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
 
+def p_assignment_address(p):
+    '''assignment : variable_or_pointer '=' '&' VARIABLE ';' '''
+    p[0] = ( (p.lineno(1), p.lineno(5)), { 'variable' : p[1], 'expression': ('&', p[4]) })
 
+def p_assignment_error(p):
+    '''assignment : variable_or_pointer '=' error ';' '''
+    p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': 'incorrect expression' })
 
+### Pointers and variables ###
+
+def p_pointer(p):
+    '''
+    variable_or_pointer : '*' VARIABLE
+                        | VARIABLE
+    '''
+    if p[1] == '*':
+        p[0] = ('*', p[2])
+    else:
+        p[0] = (None, p[1])
 
 
 ### Expression handler ###
@@ -237,7 +268,7 @@ def p_expr_4(p):
 
 def p_expr_5_incr(p):
     '''
-    expr_5 : VARIABLE INCR
+    expr_5 : variable_or_pointer INCR
     '''
     p[0] = {
             'op' : p[2],
@@ -255,7 +286,7 @@ def p_expr_5_6(p):
 def p_expr_6(p):
     '''
     expr_6 : INTEGER
-           | VARIABLE
+           | variable_or_pointer
            | '(' expr_1 ')'
     '''
     if p[1] == '(':
@@ -276,6 +307,19 @@ def p_if_only(p):
             'body' : p[6],
             }
 
+### For loops ###
+
+def p_for_loop(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'span' : (p.lineno(1), p.lineno(10)),
+            'body' : p[9]
+            }
 
 
 def p_empty(p):
@@ -290,19 +334,6 @@ parser = yacc.yacc()
 
 test_file = open("test.txt", "r")
 
-#data = \
-"""float sum(float first, float second) { \n \
-    result = first + second; \n \
-} \n \
-
-int main(void){ \n \
-    int a,b,c; \n \
-    a = b * c - 10; \n \
-    if (a > 10) { \n \
-        b = 4; \n \
-    } \n \
-}
-"""
 data = test_file.read();
 print(data);
 test_file.close();
