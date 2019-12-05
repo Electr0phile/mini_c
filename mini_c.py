@@ -3,9 +3,8 @@
 t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
-t_DIGIT_STRING = r'd'
+t_DIGIT_STRING = r'"%d"'
 t_FLOAT_STRING = r'f'
-t_STRING    = r'[a-zA-Z_0-9 ]+'
 
 # Literals are used in productions as is
 literals = '[]{}(),;=><-*/&"'
@@ -26,7 +25,6 @@ tokens = [
         'VARIABLE',
         'PLUS',
         'INCR',
-        'STRING',
         'DIGIT_STRING',
         'FLOAT_STRING',
         ] + list(reserved.values())
@@ -215,10 +213,6 @@ def p_printf_expr_digit_float(p):
     else:
         p[0] = { 'float': p[6] }
 
-def p_printf_expr_string(p):
-    ''' printf_expr : PRINTF '(' '"' STRING '"' ')' ';' '''
-    p[0] = { 'string': p[3][1:len(p[3])-1] }
-
 
 ### Pointers and variables ###
 
@@ -395,7 +389,7 @@ data = \
 r"""int main(void){
     d(4);
     5 + 5;
-    printf(d, 5);
+    printf("%d", 5);
 }
 """
 
