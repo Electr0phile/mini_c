@@ -3,9 +3,11 @@
 t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
+t_DIGIT_STRING = r'"%d"'
+t_FLOAT_STRING = r'f'
 
 # Literals are used in productions as is
-literals = "{}(),;=><-*/&"
+literals = '[]{}(),;=><-*/&"'
 
 # All types are treated as TYPE tokens
 reserved = {
@@ -14,6 +16,8 @@ reserved = {
             'void' : 'TYPE',
             'if'    : 'IF',
             'for'    : 'FOR',
+            'return' : 'RETURN',
+            'printf' : 'PRINTF',
         }
 
 tokens = [
@@ -21,6 +25,8 @@ tokens = [
         'VARIABLE',
         'PLUS',
         'INCR',
+        'DIGIT_STRING',
+        'FLOAT_STRING',
         ] + list(reserved.values())
 
 # Since types are captured by variable regexp,
@@ -32,7 +38,6 @@ def t_ID(t):
     #  else return VARIABLE
     t.type = reserved.get(t.value,'VARIABLE')
     return t
-
 
 # Ignore
 
@@ -151,18 +156,24 @@ def p_line_for_loop(p):
     'line : for_loop'
     p[0] = { 'span' : p[1]['span'], 'type':'for_loop', 'value' : p[1] }
 
-def p_line_assignment_error(p):
-    ''' line : error ';' '''
-    p[0] = { 'span' : p[1][0], 'type':'assignment', 'value' : p[1][1] }
+def p_line_expr(p):
+    ' line : expr_line '
+    p[0] = { 'span': p.linespan(0), 'type':'expr_line', 'value' : p[1] }
+
+def p_line_return(p):
+    'line : return_expr'
+    p[0] = { 'span' : p.linespan(0), 'type': 'return', 'value': p[1]}
+
+def p_line_printf(p):
+    'line : printf_expr'
+    p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
+
+
+### Line expansions ###
 
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
     p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
-
-def p_declaration_error(p):
-    '''declaration : TYPE variable_list '''
-    print("Error in declaration: lack of semicolon!")
-    p[0] = ( (p.lineno(1), 0), { 'type' : p[1], 'variables': p[2] })
 
 def p_variable_list_one(p):
     'variable_list : variable_or_pointer'
@@ -180,9 +191,28 @@ def p_assignment_address(p):
     '''assignment : variable_or_pointer '=' '&' VARIABLE ';' '''
     p[0] = ( (p.lineno(1), p.lineno(5)), { 'variable' : p[1], 'expression': ('&', p[4]) })
 
-def p_assignment_error(p):
-    '''assignment : variable_or_pointer '=' error ';' '''
-    p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': 'incorrect expression' })
+def p_return_expr(p):
+    ''' return_expr : RETURN expr_1 ';' '''
+    p[0] = { 'expression': p[2] }
+
+def p_return_expr_empty(p):
+    ''' return_expr : RETURN ';' '''
+    p[0] = { 'expression': None }
+
+def p_expr_line(p):
+    ''' expr_line : expr_1 ';' '''
+    p[0] = { 'expression': p[1] }
+
+def p_printf_expr_digit_float(p):
+    '''
+    printf_expr : PRINTF '('  DIGIT_STRING  ',' expr_1 ')' ';'
+               | PRINTF '(' '"' FLOAT_STRING '"' ',' expr_1 ')' ';'
+    '''
+    if p[3][2] == 'd':
+        p[0] = { 'digit': p[5] }
+    else:
+        p[0] = { 'float': p[6] }
+
 
 ### Pointers and variables ###
 
@@ -287,6 +317,8 @@ def p_expr_6(p):
     '''
     expr_6 : INTEGER
            | variable_or_pointer
+           | function_call
+           | array
            | '(' expr_1 ')'
     '''
     if p[1] == '(':
@@ -302,7 +334,7 @@ def p_if_only(p):
     if_clause : IF '(' expr_1 ')' '{' body '}'
     '''
     p[0] = {
-            'expr' : p[3],
+            'expression' : p[3],
             'span' : (p.lineno(1), p.lineno(7)),
             'body' : p[6],
             }
@@ -321,6 +353,27 @@ def p_for_loop(p):
             'body' : p[9]
             }
 
+### Function call ###
+
+def p_function_call(p):
+    '''function_call : VARIABLE '(' arguments_call ')' '''
+    p[0] = { 'function_name': p[1], 'arguments': p[3] }
+
+def p_arguments_names_call_one(p):
+    ''' arguments_call : expr_1 '''
+    p[0] = [{ 'expression': p[1] }]
+
+def p_arguments_names_call_recursion(p):
+    ''' arguments_call : expr_1 ',' arguments_call '''
+    p[0] = [{ 'expression': p[1]}] + p[3]
+
+### Arrays ###
+
+def p_array(p):
+    ''' array : VARIABLE '[' expr_1 ']' '''
+    p[0] = { 'array_name': p[1], 'index': p[3] }
+
+### Helpers ###
 
 def p_empty(p):
     'empty : '
@@ -332,6 +385,7 @@ def p_error(t):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
+
 test_file = open("test.txt", "r")
 
 data = test_file.read();
@@ -341,3 +395,4 @@ parser.parse(data, tracking=True)
 
 import json
 print(json.dumps(AST, indent=2))
+print(AST)
