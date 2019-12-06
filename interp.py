@@ -6,20 +6,33 @@ function_table = {} # Str->Function
 symbol_table = {} #Str -> Addr
 history_table = {} #Str -> List[Val] #saves history of a variable
 memory_table = [] #Int -> Val 
-
+next_cnt = 0; #parameter of the next line function
 symbol_table_stack = [] #stack of the symbol_tables, for implementing scopes;
 history_table_stack = [] #stack of the history tables, used for showing right history, according to the scope
-addr_stack = [] #stack of nodes, used for implementing function call and return.
+return_node_stack = [] #stack of nodes, used for implementing function call and return.
+memory_table_stack = [] #will store the size of memory_table before function calls, so that we clear unnecessary memory after a function call 
 rax = 0 #function return values stored here
 current_linenode = None
 
 
 # Class Declarations
 class Function:	
-	def __init__(self, name, line_node, args):
+	def __init__(self, name, line_node, arguments):
 		self.name = name
 		self.start = line_node;
-		self.args = args
+		self.arguments = arguments
+
+class FunctionCall:
+	def __init__(self, name, arguments):
+		self.name = name
+		self.arguments = arguments
+	def __str__(self):
+		cur_str = 'name: Name; args: ';
+		for arg in self.arguments:
+			cur_str += str(arg) +' '
+		return cur_str
+
+		
 
 
 class LineNode:
@@ -47,6 +60,7 @@ class Assignment:
 			if self.var[0] == None:#regular case, not a pointer
 				eval_res = evaluate(self.expr)
 				memory_table[symbol_table[self.var[1]]] = eval_res
+				print('{} assigned to {}'.format(self.var[1], eval_res))
 				history_table[self.var[1]].append(memory_table[symbol_table[self.var[1]]])
 			else:#pointer case with a star in front of it
 				eval_res = evaluate(self.expr)
@@ -69,7 +83,7 @@ class Expression:
 		self.right = right;
 
 	def __str__(self):
-		return '\n' + str(self.op) + ' ' + str(self.left) + ' ' + str(self.right) + '\n';
+		return 'Expression:' + str(self.op) + ' ' + str(self.left) + ' ' + str(self.right) + '\n';
 
 
 # Makes expression out of a dictionary
@@ -80,6 +94,12 @@ def get_expression(expr_dict):
 		print(expr_dict);
 		return Expression(None, expr_dict, None)
 	if isinstance(expr_dict, dict):
+		if 'function_name' in expr_dict:
+			function_name = expr_dict['function_name']
+			arguments_dict = expr_dict['arguments']
+			arguments = [get_expression(arg['expression']) for arg in arguments_dict]
+			left = FunctionCall(function_name, arguments);
+			return Expression(None, left, None);
 		left = expr_dict['left']
 		right = expr_dict['right']
 		op = expr_dict['op']
@@ -104,6 +124,17 @@ class Declaration:
 				memory_table.append(Pointer(None));
 		get_to_next_linenode();
 
+class ReturnStatement:
+	def __init__(self, expr):
+		self.expr = expr;
+	def process(self):
+		global rax, symbol_table, memory_table
+		rax = evaluate(self.expr)
+		print('Rax:', rax);
+		symbol_table = symbol_table_stack.pop()
+		prev_size = memory_table_stack.pop()
+		memory_table = memory_table[:prev_size]
+		#get_to_next_linenode();
 
 class Pointer:
 	def __init__(self, addr):
@@ -125,14 +156,6 @@ class IfClause:
 		#	start = start.next
 		return cur_str;
 	def process(self):
-		if self.visited:
-			print("it was visited")
-			global symbol_table
-			global history_table
-			symbol_table = symbol_table_stack.pop();
-			history_table = history_table_stack.pop();
-			get_to_next_linenode();
-			return;
 		cond_expr_val = evaluate(self.expr);
 		if cond_expr_val:
 			global current_linenode
@@ -146,6 +169,7 @@ class IfClause:
 
 #looks up the symbol table or tells that there's no such variable
 def lookup_value(expr):
+	print("looking up:", expr, symbol_table)
 	if expr in symbol_table:
 		return memory_table[symbol_table[expr]]
 	else:
@@ -208,6 +232,34 @@ def evaluate(expr):
 			return deref_pointer(lookup_value(expr[1]));
 		elif expr[0] == '&':
 			return Pointer(get_var_address(expr[1]))
+	if isinstance(expr, FunctionCall):
+		global current_linenode, symbol_table;
+		if len(return_node_stack) == 0 or return_node_stack[-1] != current_linenode.next:
+			return_node_stack.append(current_linenode.next);
+		#print('SAVED TO RETURN STACK:', current_linenode.next);
+		current_function = function_table[expr.name]
+		current_linenode = current_function.start;
+		symbol_table_stack.append(symbol_table.copy())
+		history_table_stack.append(history_table.copy())
+		memory_table_stack.append(len(memory_table));
+		temp_symbol_table = {}
+		i = 0;
+		for argexpr in expr.arguments:
+			#temp_symbol_table[current_function.arguments[i]['variable'][1]] = 
+			eval_res = evaluate(argexpr)
+			var = current_function.arguments[i]['variable']
+			temp_symbol_table[var[1]] = len(memory_table);
+			history_table[var[1]] = [eval_res]
+			if var[0] == None:
+				#symbol_table[var[1]] = len(memory_table);
+				memory_table.append(eval_res);
+			else:
+				memory_table.append(Pointer(eval_res));
+			i += 1;
+		symbol_table = temp_symbol_table
+		return get_user_input();
+
+
 	if isinstance(expr, Expression):
 		op = expr.op
 		if op != None:
@@ -251,12 +303,15 @@ def get_op(line_info):
 		vartype = line_info['value']['type'];
 		return Declaration(vartype, variables);
 	if line_info['type'] == 'if_clause':
-		expr = line_info['value']['expr']
+		expr = line_info['value']['expression']
 		print('expression inside if clause', expr)
 		body = get_flow_graph(line_info['value']['body']) # we have end and start of if clause here
 		#print("If body start and end", end = ': ')
 		#print(body[0], body[1])
 		return IfClause(get_expression(expr), body);
+	if line_info['type'] == 'return':
+		expr = line_info['value']['expression']
+		return ReturnStatement(get_expression(expr))
 
 
 def get_flow_graph(body):
@@ -297,76 +352,94 @@ def init_interpreter():
 	global current_linenode;
 	current_linenode = function_table['main'].start;
 
-def get_to_next_linenode():
+def get_to_next_linenode(isReturn = False):
 	global current_linenode
-	if current_linenode == None:
-		if len(addr_stack) == 0:
+	if isReturn:
+		if len(return_node_stack) == 0:
 			current_linenode = None
 		else:
-			current_linenode = addr_stack.pop();		
+			#print('Returning to:', return_node_stack[-1])
+			current_linenode = return_node_stack.pop();
+	if current_linenode == None:
+		if len(return_node_stack) == 0:
+			current_linenode = None
+		else:
+			current_linenode = return_node_stack.pop();		
 	if current_linenode.next != None:
 		current_linenode = current_linenode.next
 		if isinstance(current_linenode.optype, IfClause):
 			if current_linenode.optype.visited:
+				current_linenode.optype.visited = False
 				current_linenode = current_linenode.next
 				global symbol_table
 				symbol_table = symbol_table_stack.pop();
 	else:
-		if len(addr_stack) == 0:
+		if len(return_node_stack) == 0:
 			current_linenode = None
 		else:
-			current_linenode = addr_stack.pop();
+			#print('Returning to:', return_node_stack[-1])
+			current_linenode = return_node_stack.pop();
 
 
+
+def get_user_input():
+	print(current_linenode);
+	print('Symbol table', symbol_table);
+	print('Symbol table stack', symbol_table_stack);
+	print('Memory table', memory_table);
+	print('History table', history_table);
+	print('Return node stack', return_node_stack);	
+	user_inp = input().strip();
+	user_cmd = user_inp.split();
+	if len(user_cmd) == 0:
+		return;
+	if user_cmd[0] == 'print' or user_cmd[0] == 'p':
+		if len(user_cmd) <= 1:
+			print("Print command needs one parameter");
+			return;
+		else:
+			print(lookup_value(user_cmd[1]))
+	if user_cmd[0] == 'next' or user_cmd[0] == 'n':
+		global next_cnt
+		next_cnt = 1;
+		if len(user_cmd) > 1:
+			next_cnt = user_cmd[1];
+		while (next_cnt):
+			if (current_linenode.optype, ReturnStatement):
+				return interpreter();
+			else:
+				interpreter();
+			#current_linenode.optype.process();
+			# get_to_next_linenode();
+			
+
+def interpreter():
+	global next_cnt
+	if next_cnt == 0:
+		return
+	next_cnt -= 1;
+	isReturn = False;
+	if isinstance(current_linenode.optype, ReturnStatement):
+		isReturn = True
+	current_linenode.optype.process();
+	if isReturn:
+		return rax;
+	
+	
 
 def start_interpreter():
+	global current_linenode, symbol_table
 	while current_linenode != None:
-		user_inp = input().strip();
-		user_cmd = user_inp.split();
-		print(current_linenode);
-		print('Symbol table', symbol_table);
-		print('Symbol table stack', symbol_table_stack);
-		print('Memory table', memory_table);
-		print('History table', history_table);
-		print(user_cmd);
-		if len(user_cmd) == 0:
-			continue;
-		if user_cmd[0] == 'next' or user_cmd[0] == 'n':
-			next_cnt = 1;
-			if len(user_cmd) > 1:
-				next_cnt = user_cmd[1];
-			while (next_cnt):
-				current_linenode.optype.process();
-				# get_to_next_linenode();
-				next_cnt -= 1
-		if user_cmd[0] == 'print' or user_cmd[0] == 'p':
-			if len(user_cmd) <= 1:
-				print("Print command needs one parameter");
-				continue
-			else:
-				print(lookup_value(user_cmd[1]))		
+		get_user_input();
+		if current_linenode == None and return_node_stack:
+			current_linenode = return_node_stack.pop();
+			if current_linenode == None:
+				symbol_table = symbol_table_stack.pop()
+		print(return_node_stack);
+		#interpreter();
 	print('Execution is complete');
-	user_inp = ''
-	while (user_inp != 'q'):
-		user_inp = input().strip();
-		user_cmd = user_inp.split();
-		print(current_linenode);
-		print('Symbol table', symbol_table);
-		print('Symbol table stack', symbol_table_stack);
-		print('Memory table', memory_table);
-		print('History table', history_table);
-		print('History table stack', history_table_stacks)
-		#print(user_cmd);
-		if len(user_cmd) == 0:
-			continue;
-		if user_cmd[0] == 'print' or user_cmd[0] == 'p':
-			if len(user_cmd) <= 1:
-				print("Print command needs one parameter");
-				continue
-			else:
-				print(lookup_value(user_cmd[1]))				
-
-
+	while (get_user_input()):
+		pass;
 
 
 init_interpreter();
