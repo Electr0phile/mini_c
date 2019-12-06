@@ -3,11 +3,15 @@
 t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
-t_DIGIT_STRING = r'"%d"'
-t_FLOAT_STRING = r'f'
+t_DIGIT_STRING = r'"%d'
+t_FLOAT_STRING = r'"%f'
+t_STRING = r'"[a-zA-Z_0-9 ]*"'
+
+
 
 # Literals are used in productions as is
 literals = '[]{}(),;=><-*/&"'
+
 
 # All types are treated as TYPE tokens
 reserved = {
@@ -27,6 +31,7 @@ tokens = [
         'INCR',
         'DIGIT_STRING',
         'FLOAT_STRING',
+        'STRING',
         ] + list(reserved.values())
 
 # Since types are captured by variable regexp,
@@ -205,14 +210,24 @@ def p_expr_line(p):
 
 def p_printf_expr_digit_float(p):
     '''
-    printf_expr : PRINTF '('  DIGIT_STRING  ',' expr_1 ')' ';'
-               | PRINTF '(' '"' FLOAT_STRING '"' ',' expr_1 ')' ';'
-    '''
-    if p[3][2] == 'd':
-        p[0] = { 'digit': p[5] }
-    else:
-        p[0] = { 'float': p[6] }
+    printf_expr : PRINTF '(' STRING  ')' ';'
+                | PRINTF '(' digit ')' ';'
+                | PRINTF '(' float ')' ';'
 
+    '''
+    p[0] = p[3]
+
+def p_print_digit(p):
+    '''
+    digit : DIGIT_STRING error '"' ',' expr_1
+    '''
+    p[0] = {'digit' : p[5]}
+
+def p_print_float(p):
+    '''
+    float : FLOAT_STRING error '"' ',' expr_1
+    '''
+    p[0] = {'float' : p[5]}
 
 ### Pointers and variables ###
 
@@ -380,6 +395,7 @@ def p_empty(p):
     pass
 
 def p_error(t):
+    print(t.lexpos)
     print("Syntax error at '%s'" % t.value)
 
 import ply.yacc as yacc
@@ -389,7 +405,7 @@ data = \
 r"""int main(void){
     d(4);
     5 + 5;
-    printf("%d", 5);
+    printf("hello world");
 }
 """
 
