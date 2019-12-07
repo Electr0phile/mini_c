@@ -1,12 +1,31 @@
+int factorial(int a) {
+	if (a < 2) {
+		return 1;
+	}	
+	int c;
+	c =  a * factorial(a - 1);
+	return c;
+}
+
 int sum(int a, int b) {
-	return a + b;
+	int c;
+	c = a + b;
+	return c;
+}
+
+int kek(int a, int c) {
+	return a;
+	if (a + c > 50) {
+		return 10;
+	}
 }
 
 int main (void) {
 	int a, b, c, d, e;
-	a = 10;
-	b = 15;
-	c = sum(a, b);
-	d = sum(a, b) + sum(a, b);
-	e = sum(sum(a, b), b);
+	a = 5;
+	if (sum(factorial(10), factorial(5)) > 0) {
+		e = kek(a, d);
+	}
+	e = kek(e, d);
 }
+
