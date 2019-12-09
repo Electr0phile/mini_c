@@ -3,9 +3,9 @@
 t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
-t_DIGIT_STRING = r'"%d'
-t_FLOAT_STRING = r'"%f'
-t_STRING = r'"[a-zA-Z_0-9 ]*"'
+t_DIGIT_STRING = r'"%d[\\]n"'
+t_FLOAT_STRING = r'"%f[\\]n"'
+t_STRING = r'"[a-zA-Z_0-9\*\\ ]*"'
 
 
 
@@ -181,7 +181,10 @@ def p_declaration(p):
     p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
 
 def p_variable_list_one(p):
-    'variable_list : variable_or_pointer'
+    '''
+    variable_list : variable_or_pointer
+                  | array
+    '''
     p[0] = [p[1]]
 
 def p_variable_list_recursion(p):
@@ -219,15 +222,15 @@ def p_printf_expr_digit_float(p):
 
 def p_print_digit(p):
     '''
-    digit : DIGIT_STRING error '"' ',' expr_1
+    digit : DIGIT_STRING ',' expr_1
     '''
-    p[0] = {'digit' : p[5]}
+    p[0] = {'digit' : p[3]}
 
 def p_print_float(p):
     '''
-    float : FLOAT_STRING error '"' ',' expr_1
+    float : FLOAT_STRING ',' expr_1
     '''
-    p[0] = {'float' : p[5]}
+    p[0] = {'float' : p[3]}
 
 ### Pointers and variables ###
 
@@ -405,7 +408,7 @@ data = \
 r"""int main(void){
     d(4);
     5 + 5;
-    printf("hello world");
+    printf("hello\n");
 }
 """
 
