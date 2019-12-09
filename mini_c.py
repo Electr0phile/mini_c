@@ -188,15 +188,24 @@ def p_variable_list_one(p):
     p[0] = [p[1]]
 
 def p_variable_list_recursion(p):
-    '''variable_list : variable_or_pointer ',' variable_list '''
+    '''
+    variable_list : variable_or_pointer ',' variable_list
+                  | array ',' variable_list
+    '''
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
-    '''assignment : variable_or_pointer '=' expr_1 ';' '''
+    '''
+    assignment : variable_or_pointer '=' expr_1 ';'
+               | array '=' expr_1 ';'
+    '''
     p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
 
 def p_assignment_address(p):
-    '''assignment : variable_or_pointer '=' '&' VARIABLE ';' '''
+    '''
+    assignment : variable_or_pointer '=' '&' VARIABLE ';'
+               | array '=' '&' VARIABLE ';'
+    '''
     p[0] = ( (p.lineno(1), p.lineno(5)), { 'variable' : p[1], 'expression': ('&', p[4]) })
 
 def p_return_expr(p):
@@ -406,9 +415,8 @@ parser = yacc.yacc()
 
 data = \
 r"""int main(void){
-    d(4);
-    5 + 5;
-    printf("hello\n");
+    int a[5], a;
+    a[5] = &f;
 }
 """
 
