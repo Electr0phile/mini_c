@@ -99,7 +99,7 @@ def p_function_body(p):
     ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
     p[0] = {
             'function_name': p[2],
-            'span': (p.lineno(1), p.lineno(8)),
+            'span': p.linespan(0),
             'return_type': p[1],
             'arguments': p[4],
             'body' : p[7],
@@ -147,19 +147,19 @@ def p_body_empty(p):
 
 def p_line_declaration(p):
     'line : declaration'
-    p[0] = { 'span': p[1][0], 'type':'declaration', 'value' : p[1][1] }
+    p[0] = { 'span': p.linespan(0), 'type':'declaration', 'value' : p[1] }
 
 def p_line_assignment(p):
     'line : assignment'
-    p[0] = { 'span' : p[1][0], 'type':'assignment', 'value' : p[1][1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'assignment', 'value' : p[1] }
 
 def p_line_if_clause(p):
     'line : if_clause'
-    p[0] = { 'span' : p[1]['span'], 'type':'if_clause', 'value' : p[1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'if_clause', 'value' : p[1] }
 
 def p_line_for_loop(p):
     'line : for_loop'
-    p[0] = { 'span' : p[1]['span'], 'type':'for_loop', 'value' : p[1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'for_loop', 'value' : p[1] }
 
 def p_line_expr(p):
     ' line : expr_line '
@@ -178,7 +178,7 @@ def p_line_printf(p):
 
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
-    p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
+    p[0] = { 'type' : p[1], 'variables': p[2] }
 
 def p_variable_list_one(p):
     '''
@@ -199,14 +199,14 @@ def p_assignment(p):
     assignment : variable_or_pointer '=' expr_1 ';'
                | array '=' expr_1 ';'
     '''
-    p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
+    p[0] = { 'variable' : p[1], 'expression': p[3] }
 
 def p_assignment_address(p):
     '''
     assignment : variable_or_pointer '=' '&' VARIABLE ';'
                | array '=' '&' VARIABLE ';'
     '''
-    p[0] = ( (p.lineno(1), p.lineno(5)), { 'variable' : p[1], 'expression': ('&', p[4]) })
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
     ''' return_expr : RETURN expr_1 ';' '''
@@ -362,7 +362,6 @@ def p_if_only(p):
     '''
     p[0] = {
             'expression' : p[3],
-            'span' : (p.lineno(1), p.lineno(7)),
             'body' : p[6],
             }
 
@@ -376,7 +375,6 @@ def p_for_loop(p):
             'initialization' : p[3],
             'condition' : p[4],
             'operation' : p[6],
-            'span' : (p.lineno(1), p.lineno(10)),
             'body' : p[9]
             }
 
