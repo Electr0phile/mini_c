@@ -21,11 +21,17 @@ int kek(int a, int c) {
 }
 
 int main (void) {
-	int a, b, c, d, e;
+	int *a, b, c, d, e;
 	a = 5;
-	if (sum(factorial(10), factorial(5)) > 0) {
-		e = kek(a, d);
+	a = 10;
+	b = 5;
+	if (a > 1) {
+		int b;
+		b = 15;
+		b = 20;
+		a = 30;
 	}
-	e = kek(e, d);
+	b = 10;
+	e = sum(factorial(10), factorial(10));
 }
 

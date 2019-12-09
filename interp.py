@@ -11,7 +11,7 @@ symbol_table_stack = [] #stack of the symbol_tables, for implementing scopes;
 history_table_stack = [] #stack of the history tables, used for showing right history, according to the scope
 return_node_stack = [] #stack of nodes, used for implementing function call and return.
 memory_table_stack = [] #will store the size of memory_table before function calls, so that we clear unnecessary memory after a function call 
-scope_stack = []
+scope_stack = [] 		#needed for implementing scopes, it basically stores which function was called
 rax = 0 #function return values stored here
 current_linenode = None
 
@@ -62,7 +62,12 @@ class Assignment:
 			if self.var[0] == None:#regular case, not a pointer
 				eval_res = evaluate(self.expr)
 				print("assigning to {}, eval_res = {}".format(self.var[1], eval_res))
+				#if type(eval_res) == type(lookup_value)
 				memory_table[symbol_table[self.var[1]]] = eval_res
+				print('before error', history_table)
+				print(history_table_stack)
+				print(symbol_table)
+				print(memory_table)
 				history_table[self.var[1]].append(memory_table[symbol_table[self.var[1]]])
 			else:#pointer case with a star in front of it
 				eval_res = evaluate(self.expr)
@@ -129,21 +134,27 @@ class ReturnStatement:
 	def __init__(self, expr):
 		self.expr = expr;
 	def process(self):
-		global rax, symbol_table, memory_table
+		global rax, symbol_table, memory_table, history_table
 		rax = evaluate(self.expr)
 		print('Rax:', rax);
 		print('Scope stack before:', scope_stack);
 		while scope_stack[-1] == 1:
-			symbol_table = symbol_table_stack.pop()
+			symbol_table_stack.pop()
+			#revert_history_table();
+			history_table_stack.pop()
 			scope_stack.pop();
 		symbol_table = symbol_table_stack.pop()
+		history_table = history_table_stack.pop()
+		#revert_history_table();
 		scope_stack.pop();
 		print('Scope stack after:', scope_stack);
 		prev_size = memory_table_stack.pop()
 		memory_table = memory_table[:prev_size]
 		print(symbol_table);
 		print(memory_table)
+		print('changed to', history_table);
 		print(symbol_table_stack)
+		print(history_table_stack);
 		get_to_next_linenode(True);
 
 class Pointer:
@@ -218,7 +229,24 @@ def invalid_pointer_error(addr):
 def not_a_pointer_error(var):
 	print("The variable {} is not a pointer".format(var))
 
+def revert_history_table():
+	print("WE ARE REVERTING")
+	global history_table, history_table_stack
+	last_history_table = history_table_stack.pop()
+	print('Reverting:\n', history_table, '\n', last_history_table)
+	for var in last_history_table:
+		if var in history_table and is_prefix(last_history_table[var], history_table[var]):
+			last_history_table[var] = history_table[var]
+	history_table = last_history_table;
+	print('changed to', history_table)
 
+def is_prefix(list_a, list_b):
+	if len(list_b) < len(list_a):
+		return False
+	for i in range(len(list_a)):
+		if list_a[i] != list_b[i]:
+			return False
+	return True			
 
 def is_float(expr):
 	try:
@@ -248,7 +276,7 @@ def evaluate(expr):
 		elif expr[0] == '&':
 			return Pointer(get_var_address(expr[1]))
 	if isinstance(expr, FunctionCall):
-		global current_linenode, symbol_table;
+		global current_linenode, symbol_table, history_table
 		if current_linenode != None:
 			return_node_stack.append(current_linenode.next);
 			print('SAVED TO RETURN STACK:', current_linenode.next);
@@ -259,20 +287,26 @@ def evaluate(expr):
 		history_table_stack.append(history_table.copy())
 		memory_table_stack.append(len(memory_table));
 		temp_symbol_table = {}
+		temp_history_table = {}
 		i = 0;
 		for argexpr in expr.arguments:
 			#temp_symbol_table[current_function.arguments[i]['variable'][1]] = 
 			eval_res = evaluate(argexpr)
 			var = current_function.arguments[i]['variable']
 			temp_symbol_table[var[1]] = len(memory_table);
-			history_table[var[1]] = [eval_res]
+			temp_history_table[var[1]] = [eval_res]
 			if var[0] == None:
 				#symbol_table[var[1]] = len(memory_table);
 				memory_table.append(eval_res);
 			else:
-				memory_table.append(Pointer(eval_res));
+				if not isinstance(eval_res, Pointer):
+					memory_table.append(Pointer(eval_res));
+				else:
+					memory_table.append(eval_res);
 			i += 1;
 		symbol_table = temp_symbol_table
+		history_table = temp_history_table
+		print('entering a function with', history_table)
 		current_linenode = current_function.start;
 		return get_user_input();
 
@@ -401,6 +435,7 @@ def get_to_next_linenode(isReturn = False):
 				current_linenode = current_linenode.next
 				global symbol_table
 				symbol_table = symbol_table_stack.pop();
+				revert_history_table();
 				return
 	else:
 		if len(return_node_stack) == 0:
@@ -417,6 +452,7 @@ def get_user_input():
 	print('Symbol table stack', symbol_table_stack);
 	print('Memory table', memory_table);
 	print('History table', history_table);
+	print('History table stack', history_table_stack);
 	print('Return node stack', return_node_stack);	
 	global next_cnt;
 	while next_cnt:
@@ -436,11 +472,13 @@ def get_user_input():
 	if len(user_cmd) == 0:
 		return;
 	if user_cmd[0] == 'print' or user_cmd[0] == 'p':
-		if len(user_cmd) <= 1:
-			print("Print command needs one parameter");
-			return;
-		else:
-			print(lookup_value(user_cmd[1]))
+		while (user_cmd[0] == 'print' or user_cmd[0] == 'p'):
+			if len(user_cmd) <= 1:
+				print("Print command needs one parameter");
+			else:
+				print(lookup_value(user_cmd[1]))
+			user_inp = input().strip();
+			user_cmd = user_inp.split();
 	if user_cmd[0] == 'next' or user_cmd[0] == 'n':
 		#global next_cnt
 		next_cnt = 1;

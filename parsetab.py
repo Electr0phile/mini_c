@@ -6,9 +6,9 @@ _tabversion = '3.10'
 
 _lr_method = 'LALR'
 
-_lr_signature = "IF INCR INTEGER PLUS TYPE TYPE TYPE VARIABLE function_list : function function_list  function_list : empty  function : TYPE VARIABLE '(' arguments ')' '{' body '}'  arguments : TYPE VARIABLE  arguments : TYPE VARIABLE ',' arguments  arguments : TYPE  arguments : TYPE ',' arguments body : line bodybody : emptyline : declarationline : assignmentline : if_clausedeclaration : TYPE variable_list ';' variable_list : VARIABLEvariable_list : VARIABLE ',' variable_list assignment : VARIABLE '=' expr_1 ';' \n    expr_1 : expr_2 '>' expr_1\n           | expr_2 '<' expr_1\n    \n    expr_1 : expr_2\n    \n    expr_2 : expr_3 PLUS expr_2\n           | expr_3 '-' expr_2\n    \n    expr_2 : expr_3\n    \n    expr_3 : expr_4 '*' expr_3\n           | expr_4 '/' expr_3\n    \n    expr_3 : expr_4\n    \n    expr_4 : '-' expr_5\n           | expr_5\n    \n    expr_5 : VARIABLE INCR\n    \n    expr_5 : expr_6\n    \n    expr_6 : INTEGER\n           | VARIABLE\n           | '(' expr_1 ')'\n    \n    if_clause : IF '(' expr_1 ')' '{' body '}'\n    empty : "
+_lr_signature = 'DIGIT_STRING FLOAT_STRING FOR IF INCR INTEGER PLUS PRINTF RETURN TYPE TYPE TYPE VARIABLE function_list : function function_list  function_list : empty  function : TYPE VARIABLE \'(\' arguments \')\' \'{\' body \'}\'  arguments : TYPE variable_or_pointer  arguments : TYPE variable_or_pointer \',\' arguments  arguments : TYPE  arguments : TYPE \',\' arguments body : line bodybody : emptyline : declarationline : assignmentline : if_clauseline : for_loop line : expr_line line : return_exprline : printf_exprdeclaration : TYPE variable_list \';\' variable_list : variable_or_pointervariable_list : variable_or_pointer \',\' variable_list assignment : variable_or_pointer \'=\' expr_1 \';\' assignment : variable_or_pointer \'=\' \'&\' VARIABLE \';\'  return_expr : RETURN expr_1 \';\'  return_expr : RETURN \';\'  expr_line : expr_1 \';\' \n    printf_expr : PRINTF \'(\'  DIGIT_STRING  \',\' expr_1 \')\' \';\'\n               | PRINTF \'(\' \'"\' FLOAT_STRING \'"\' \',\' expr_1 \')\' \';\'\n    \n    variable_or_pointer : \'*\' VARIABLE\n                        | VARIABLE\n    \n    expr_1 : expr_2 \'>\' expr_1\n           | expr_2 \'<\' expr_1\n    \n    expr_1 : expr_2\n    \n    expr_2 : expr_3 PLUS expr_2\n           | expr_3 \'-\' expr_2\n    \n    expr_2 : expr_3\n    \n    expr_3 : expr_4 \'*\' expr_3\n           | expr_4 \'/\' expr_3\n    \n    expr_3 : expr_4\n    \n    expr_4 : \'-\' expr_5\n           | expr_5\n    \n    expr_5 : variable_or_pointer INCR\n    \n    expr_5 : expr_6\n    \n    expr_6 : INTEGER\n           | variable_or_pointer\n           | function_call\n           | array\n           | \'(\' expr_1 \')\'\n    \n    if_clause : IF \'(\' expr_1 \')\' \'{\' body \'}\'\n    \n    for_loop : FOR \'(\' assignment expr_1 \';\' expr_1 \')\' \'{\' body \'}\'\n    function_call : VARIABLE \'(\' arguments_call \')\'  arguments_call : expr_1  arguments_call : expr_1 \',\' arguments_call  array : VARIABLE \'[\' expr_1 \']\' empty : '
     
-_lr_action_items = {'TYPE':([0,2,7,11,13,15,20,22,23,24,29,32,47,64,66,],[4,4,8,8,8,17,17,-10,-11,-12,-3,-13,-16,17,-33,]),'$end':([0,1,2,3,5,29,],[-34,0,-34,-2,-1,-3,]),'VARIABLE':([4,8,15,17,20,22,23,24,28,31,32,33,38,43,47,48,49,50,51,53,54,64,66,],[6,10,18,27,18,-10,-11,-12,34,34,-13,27,34,34,-16,34,34,34,34,34,34,18,-33,]),'(':([6,25,28,31,38,43,48,49,50,51,53,54,],[7,31,43,43,43,43,43,43,43,43,43,43,]),')':([8,9,10,14,16,34,36,37,39,40,41,42,44,46,52,55,57,58,59,60,61,62,63,],[-6,12,-4,-7,-5,-31,-19,-22,-25,-27,-29,-30,56,-28,-26,63,-17,-18,-20,-21,-23,-24,-32,]),',':([8,10,27,],[11,13,33,]),'{':([12,56,],[15,64,]),'}':([15,19,20,21,22,23,24,30,32,47,64,65,66,],[-34,29,-34,-9,-10,-11,-12,-8,-13,-16,-34,66,-33,]),'IF':([15,20,22,23,24,32,47,64,66,],[25,25,-10,-11,-12,-13,-16,25,-33,]),'=':([18,],[28,]),';':([26,27,34,35,36,37,39,40,41,42,45,46,52,57,58,59,60,61,62,63,],[32,-14,-31,47,-19,-22,-25,-27,-29,-30,-15,-28,-26,-17,-18,-20,-21,-23,-24,-32,]),'-':([28,31,34,37,39,40,41,42,43,46,48,49,50,51,52,53,54,61,62,63,],[38,38,-31,51,-25,-27,-29,-30,38,-28,38,38,38,38,-26,38,38,-23,-24,-32,]),'INTEGER':([28,31,38,43,48,49,50,51,53,54,],[42,42,42,42,42,42,42,42,42,42,]),'INCR':([34,],[46,]),'*':([34,39,40,41,42,46,52,63,],[-31,53,-27,-29,-30,-28,-26,-32,]),'/':([34,39,40,41,42,46,52,63,],[-31,54,-27,-29,-30,-28,-26,-32,]),'PLUS':([34,37,39,40,41,42,46,52,61,62,63,],[-31,50,-25,-27,-29,-30,-28,-26,-23,-24,-32,]),'>':([34,36,37,39,40,41,42,46,52,59,60,61,62,63,],[-31,48,-22,-25,-27,-29,-30,-28,-26,-20,-21,-23,-24,-32,]),'<':([34,36,37,39,40,41,42,46,52,59,60,61,62,63,],[-31,49,-22,-25,-27,-29,-30,-28,-26,-20,-21,-23,-24,-32,]),}
+_lr_action_items = {'TYPE':([0,2,7,11,15,18,24,26,27,28,29,30,31,32,54,58,62,71,82,95,102,103,111,113,115,118,119,],[4,4,8,8,8,20,20,-10,-11,-12,-13,-14,-15,-16,-3,-24,-23,-17,-22,-20,-21,20,-47,-25,20,-26,-48,]),'$end':([0,1,2,3,5,54,],[-53,0,-53,-2,-1,-3,]),'VARIABLE':([4,8,12,18,20,22,24,26,27,28,29,30,31,32,37,41,50,51,56,58,59,60,62,64,65,66,67,69,70,71,72,78,80,82,93,95,99,102,103,104,110,111,113,115,118,119,],[6,13,17,21,13,21,21,-10,-11,-12,-13,-14,-15,-16,21,21,21,21,21,-24,21,13,-23,21,21,21,21,21,21,-17,13,96,21,-22,21,-20,21,-21,21,21,21,-47,-25,21,-26,-48,]),'(':([6,18,21,22,24,26,27,28,29,30,31,32,35,36,37,38,41,50,51,56,58,59,62,64,65,66,67,69,70,71,80,82,93,95,99,102,103,104,110,111,113,115,118,119,],[7,22,50,22,22,-10,-11,-12,-13,-14,-15,-16,59,60,22,63,22,22,22,22,-24,22,-23,22,22,22,22,22,22,-17,22,-22,22,-20,22,-21,22,22,22,-47,-25,22,-26,-48,]),')':([8,9,10,13,16,17,19,21,39,40,42,43,44,45,46,47,52,53,57,68,73,74,76,79,85,86,87,88,89,90,92,94,101,105,108,114,],[-6,14,-4,-28,-7,-27,-5,-28,-31,-34,-37,-39,-41,-42,-44,-45,76,-43,-40,-38,92,-50,-46,97,-29,-30,-32,-33,-35,-36,-49,-52,-51,109,112,116,]),',':([8,10,13,17,21,39,40,42,43,44,45,46,47,49,53,57,68,74,76,83,85,86,87,88,89,90,92,94,106,],[11,15,-28,-27,-28,-31,-34,-37,-39,-41,-42,-44,-45,72,-43,-40,-38,93,-46,99,-29,-30,-32,-33,-35,-36,-49,-52,110,]),'*':([8,17,18,20,21,22,24,26,27,28,29,30,31,32,33,37,41,42,43,44,45,46,47,50,51,53,56,57,58,59,60,62,64,65,66,67,68,69,70,71,72,76,80,82,92,93,94,95,99,102,103,104,110,111,113,115,118,119,],[12,-27,12,12,-28,12,12,-10,-11,-12,-13,-14,-15,-16,-43,12,12,69,-39,-41,-42,-44,-45,12,12,-43,12,-40,-24,12,12,-23,12,12,12,12,-38,12,12,-17,12,-46,12,-22,-49,12,-52,-20,12,-21,12,12,12,-47,-25,12,-26,-48,]),';':([13,17,21,33,34,37,39,40,42,43,44,45,46,47,48,49,53,57,61,68,76,77,85,86,87,88,89,90,91,92,94,96,98,109,116,],[-28,-27,-28,-43,58,62,-31,-34,-37,-39,-41,-42,-44,-45,71,-18,-43,-40,82,-38,-46,95,-29,-30,-32,-33,-35,-36,-19,-49,-52,102,104,113,118,]),'=':([13,17,21,33,81,],[-28,-27,-28,56,56,]),'{':([14,97,112,],[18,103,115,]),'INCR':([17,21,33,53,],[-27,-28,57,57,]),'/':([17,21,33,42,43,44,45,46,47,53,57,68,76,92,94,],[-27,-28,-43,70,-39,-41,-42,-44,-45,-43,-40,-38,-46,-49,-52,]),'PLUS':([17,21,33,40,42,43,44,45,46,47,53,57,68,76,89,90,92,94,],[-27,-28,-43,66,-37,-39,-41,-42,-44,-45,-43,-40,-38,-46,-35,-36,-49,-52,]),'-':([17,18,21,22,24,26,27,28,29,30,31,32,33,37,40,42,43,44,45,46,47,50,51,53,56,57,58,59,62,64,65,66,67,68,69,70,71,76,80,82,89,90,92,93,94,95,99,102,103,104,110,111,113,115,118,119,],[-27,41,-28,41,41,-10,-11,-12,-13,-14,-15,-16,-43,41,67,-37,-39,-41,-42,-44,-45,41,41,-43,41,-40,-24,41,-23,41,41,41,41,-38,41,41,-17,-46,41,-22,-35,-36,-49,41,-52,-20,41,-21,41,41,41,-47,-25,41,-26,-48,]),'>':([17,21,33,39,40,42,43,44,45,46,47,53,57,68,76,87,88,89,90,92,94,],[-27,-28,-43,64,-34,-37,-39,-41,-42,-44,-45,-43,-40,-38,-46,-32,-33,-35,-36,-49,-52,]),'<':([17,21,33,39,40,42,43,44,45,46,47,53,57,68,76,87,88,89,90,92,94,],[-27,-28,-43,65,-34,-37,-39,-41,-42,-44,-45,-43,-40,-38,-46,-32,-33,-35,-36,-49,-52,]),']':([17,21,39,40,42,43,44,45,46,47,53,57,68,75,76,85,86,87,88,89,90,92,94,],[-27,-28,-31,-34,-37,-39,-41,-42,-44,-45,-43,-40,-38,94,-46,-29,-30,-32,-33,-35,-36,-49,-52,]),'}':([18,23,24,25,26,27,28,29,30,31,32,55,58,62,71,82,95,102,103,107,111,113,115,117,118,119,],[-53,54,-53,-9,-10,-11,-12,-13,-14,-15,-16,-8,-24,-23,-17,-22,-20,-21,-53,111,-47,-25,-53,119,-26,-48,]),'IF':([18,24,26,27,28,29,30,31,32,58,62,71,82,95,102,103,111,113,115,118,119,],[35,35,-10,-11,-12,-13,-14,-15,-16,-24,-23,-17,-22,-20,-21,35,-47,-25,35,-26,-48,]),'FOR':([18,24,26,27,28,29,30,31,32,58,62,71,82,95,102,103,111,113,115,118,119,],[36,36,-10,-11,-12,-13,-14,-15,-16,-24,-23,-17,-22,-20,-21,36,-47,-25,36,-26,-48,]),'RETURN':([18,24,26,27,28,29,30,31,32,58,62,71,82,95,102,103,111,113,115,118,119,],[37,37,-10,-11,-12,-13,-14,-15,-16,-24,-23,-17,-22,-20,-21,37,-47,-25,37,-26,-48,]),'PRINTF':([18,24,26,27,28,29,30,31,32,58,62,71,82,95,102,103,111,113,115,118,119,],[38,38,-10,-11,-12,-13,-14,-15,-16,-24,-23,-17,-22,-20,-21,38,-47,-25,38,-26,-48,]),'INTEGER':([18,22,24,26,27,28,29,30,31,32,37,41,50,51,56,58,59,62,64,65,66,67,69,70,71,80,82,93,95,99,102,103,104,110,111,113,115,118,119,],[45,45,45,-10,-11,-12,-13,-14,-15,-16,45,45,45,45,45,-24,45,-23,45,45,45,45,45,45,-17,45,-22,45,-20,45,-21,45,45,45,-47,-25,45,-26,-48,]),'[':([21,],[51,]),'&':([56,],[78,]),'DIGIT_STRING':([63,],[83,]),'"':([63,100,],[84,106,]),'FLOAT_STRING':([84,],[100,]),}
 
 _lr_action = {}
 for _k, _v in _lr_action_items.items():
@@ -17,7 +17,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'function_list':([0,2,],[1,5,]),'function':([0,2,],[2,2,]),'empty':([0,2,15,20,64,],[3,3,21,21,21,]),'arguments':([7,11,13,],[9,14,16,]),'body':([15,20,64,],[19,30,65,]),'line':([15,20,64,],[20,20,20,]),'declaration':([15,20,64,],[22,22,22,]),'assignment':([15,20,64,],[23,23,23,]),'if_clause':([15,20,64,],[24,24,24,]),'variable_list':([17,33,],[26,45,]),'expr_1':([28,31,43,48,49,],[35,44,55,57,58,]),'expr_2':([28,31,43,48,49,50,51,],[36,36,36,36,36,59,60,]),'expr_3':([28,31,43,48,49,50,51,53,54,],[37,37,37,37,37,37,37,61,62,]),'expr_4':([28,31,43,48,49,50,51,53,54,],[39,39,39,39,39,39,39,39,39,]),'expr_5':([28,31,38,43,48,49,50,51,53,54,],[40,40,52,40,40,40,40,40,40,40,]),'expr_6':([28,31,38,43,48,49,50,51,53,54,],[41,41,41,41,41,41,41,41,41,41,]),}
+_lr_goto_items = {'function_list':([0,2,],[1,5,]),'function':([0,2,],[2,2,]),'empty':([0,2,18,24,103,115,],[3,3,25,25,25,25,]),'arguments':([7,11,15,],[9,16,19,]),'variable_or_pointer':([8,18,20,22,24,37,41,50,51,56,59,60,64,65,66,67,69,70,72,80,93,99,103,104,110,115,],[10,33,49,53,33,53,53,53,53,53,53,81,53,53,53,53,53,53,49,53,53,53,33,53,53,33,]),'body':([18,24,103,115,],[23,55,107,117,]),'line':([18,24,103,115,],[24,24,24,24,]),'declaration':([18,24,103,115,],[26,26,26,26,]),'assignment':([18,24,60,103,115,],[27,27,80,27,27,]),'if_clause':([18,24,103,115,],[28,28,28,28,]),'for_loop':([18,24,103,115,],[29,29,29,29,]),'expr_line':([18,24,103,115,],[30,30,30,30,]),'return_expr':([18,24,103,115,],[31,31,31,31,]),'printf_expr':([18,24,103,115,],[32,32,32,32,]),'expr_1':([18,22,24,37,50,51,56,59,64,65,80,93,99,103,104,110,115,],[34,52,34,61,74,75,77,79,85,86,98,74,105,34,108,114,34,]),'expr_2':([18,22,24,37,50,51,56,59,64,65,66,67,80,93,99,103,104,110,115,],[39,39,39,39,39,39,39,39,39,39,87,88,39,39,39,39,39,39,39,]),'expr_3':([18,22,24,37,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[40,40,40,40,40,40,40,40,40,40,40,40,89,90,40,40,40,40,40,40,40,]),'expr_4':([18,22,24,37,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,]),'expr_5':([18,22,24,37,41,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[43,43,43,43,68,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,43,]),'expr_6':([18,22,24,37,41,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,]),'function_call':([18,22,24,37,41,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,]),'array':([18,22,24,37,41,50,51,56,59,64,65,66,67,69,70,80,93,99,103,104,110,115,],[47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,]),'variable_list':([20,72,],[48,91,]),'arguments_call':([50,93,],[73,101,]),}
 
 _lr_goto = {}
 for _k, _v in _lr_goto_items.items():
@@ -27,38 +27,57 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> function_list","S'",1,None,None,None),
-  ('function_list -> function function_list','function_list',2,'p_function_list','mini_c.py',68),
-  ('function_list -> empty','function_list',1,'p_function_list_empty','mini_c.py',72),
-  ('function -> TYPE VARIABLE ( arguments ) { body }','function',8,'p_function_body','mini_c.py',88),
-  ('arguments -> TYPE VARIABLE','arguments',2,'p_argunments_names_one','mini_c.py',98),
-  ('arguments -> TYPE VARIABLE , arguments','arguments',4,'p_arguments_names_recursion','mini_c.py',102),
-  ('arguments -> TYPE','arguments',1,'p_argunments_types_one','mini_c.py',106),
-  ('arguments -> TYPE , arguments','arguments',3,'p_arguments_types_recursion','mini_c.py',110),
-  ('body -> line body','body',2,'p_body_line_body','mini_c.py',119),
-  ('body -> empty','body',1,'p_body_empty','mini_c.py',123),
-  ('line -> declaration','line',1,'p_line_declaration','mini_c.py',138),
-  ('line -> assignment','line',1,'p_line_assignment','mini_c.py',142),
-  ('line -> if_clause','line',1,'p_line_if_clause','mini_c.py',146),
-  ('declaration -> TYPE variable_list ;','declaration',3,'p_declaration','mini_c.py',150),
-  ('variable_list -> VARIABLE','variable_list',1,'p_variable_list_one','mini_c.py',154),
-  ('variable_list -> VARIABLE , variable_list','variable_list',3,'p_variable_list_recursion','mini_c.py',158),
-  ('assignment -> VARIABLE = expr_1 ;','assignment',4,'p_assignment','mini_c.py',162),
-  ('expr_1 -> expr_2 > expr_1','expr_1',3,'p_expr_1_lr','mini_c.py',173),
-  ('expr_1 -> expr_2 < expr_1','expr_1',3,'p_expr_1_lr','mini_c.py',174),
-  ('expr_1 -> expr_2','expr_1',1,'p_expr_1_2','mini_c.py',184),
-  ('expr_2 -> expr_3 PLUS expr_2','expr_2',3,'p_expr_2_lr','mini_c.py',190),
-  ('expr_2 -> expr_3 - expr_2','expr_2',3,'p_expr_2_lr','mini_c.py',191),
-  ('expr_2 -> expr_3','expr_2',1,'p_expr_2_3','mini_c.py',202),
-  ('expr_3 -> expr_4 * expr_3','expr_3',3,'p_expr_3_lr','mini_c.py',208),
-  ('expr_3 -> expr_4 / expr_3','expr_3',3,'p_expr_3_lr','mini_c.py',209),
-  ('expr_3 -> expr_4','expr_3',1,'p_expr_3_4','mini_c.py',220),
-  ('expr_4 -> - expr_5','expr_4',2,'p_expr_4','mini_c.py',226),
-  ('expr_4 -> expr_5','expr_4',1,'p_expr_4','mini_c.py',227),
-  ('expr_5 -> VARIABLE INCR','expr_5',2,'p_expr_5_incr','mini_c.py',240),
-  ('expr_5 -> expr_6','expr_5',1,'p_expr_5_6','mini_c.py',250),
-  ('expr_6 -> INTEGER','expr_6',1,'p_expr_6','mini_c.py',257),
-  ('expr_6 -> VARIABLE','expr_6',1,'p_expr_6','mini_c.py',258),
-  ('expr_6 -> ( expr_1 )','expr_6',3,'p_expr_6','mini_c.py',259),
-  ('if_clause -> IF ( expr_1 ) { body }','if_clause',7,'p_if_only','mini_c.py',271),
-  ('empty -> <empty>','empty',0,'p_empty','mini_c.py',282),
+  ('function_list -> function function_list','function_list',2,'p_function_list','mini_c.py',74),
+  ('function_list -> empty','function_list',1,'p_function_list_empty','mini_c.py',78),
+  ('function -> TYPE VARIABLE ( arguments ) { body }','function',8,'p_function_body','mini_c.py',94),
+  ('arguments -> TYPE variable_or_pointer','arguments',2,'p_argunments_names_one','mini_c.py',104),
+  ('arguments -> TYPE variable_or_pointer , arguments','arguments',4,'p_arguments_names_recursion','mini_c.py',108),
+  ('arguments -> TYPE','arguments',1,'p_argunments_types_one','mini_c.py',112),
+  ('arguments -> TYPE , arguments','arguments',3,'p_arguments_types_recursion','mini_c.py',116),
+  ('body -> line body','body',2,'p_body_line_body','mini_c.py',125),
+  ('body -> empty','body',1,'p_body_empty','mini_c.py',129),
+  ('line -> declaration','line',1,'p_line_declaration','mini_c.py',144),
+  ('line -> assignment','line',1,'p_line_assignment','mini_c.py',148),
+  ('line -> if_clause','line',1,'p_line_if_clause','mini_c.py',152),
+  ('line -> for_loop','line',1,'p_line_for_loop','mini_c.py',156),
+  ('line -> expr_line','line',1,'p_line_expr','mini_c.py',160),
+  ('line -> return_expr','line',1,'p_line_return','mini_c.py',164),
+  ('line -> printf_expr','line',1,'p_line_printf','mini_c.py',168),
+  ('declaration -> TYPE variable_list ;','declaration',3,'p_declaration','mini_c.py',175),
+  ('variable_list -> variable_or_pointer','variable_list',1,'p_variable_list_one','mini_c.py',179),
+  ('variable_list -> variable_or_pointer , variable_list','variable_list',3,'p_variable_list_recursion','mini_c.py',183),
+  ('assignment -> variable_or_pointer = expr_1 ;','assignment',4,'p_assignment','mini_c.py',187),
+  ('assignment -> variable_or_pointer = & VARIABLE ;','assignment',5,'p_assignment_address','mini_c.py',191),
+  ('return_expr -> RETURN expr_1 ;','return_expr',3,'p_return_expr','mini_c.py',195),
+  ('return_expr -> RETURN ;','return_expr',2,'p_return_expr_empty','mini_c.py',199),
+  ('expr_line -> expr_1 ;','expr_line',2,'p_expr_line','mini_c.py',203),
+  ('printf_expr -> PRINTF ( DIGIT_STRING , expr_1 ) ;','printf_expr',7,'p_printf_expr_digit_float','mini_c.py',208),
+  ('printf_expr -> PRINTF ( " FLOAT_STRING " , expr_1 ) ;','printf_expr',9,'p_printf_expr_digit_float','mini_c.py',209),
+  ('variable_or_pointer -> * VARIABLE','variable_or_pointer',2,'p_pointer','mini_c.py',221),
+  ('variable_or_pointer -> VARIABLE','variable_or_pointer',1,'p_pointer','mini_c.py',222),
+  ('expr_1 -> expr_2 > expr_1','expr_1',3,'p_expr_1_lr','mini_c.py',234),
+  ('expr_1 -> expr_2 < expr_1','expr_1',3,'p_expr_1_lr','mini_c.py',235),
+  ('expr_1 -> expr_2','expr_1',1,'p_expr_1_2','mini_c.py',245),
+  ('expr_2 -> expr_3 PLUS expr_2','expr_2',3,'p_expr_2_lr','mini_c.py',251),
+  ('expr_2 -> expr_3 - expr_2','expr_2',3,'p_expr_2_lr','mini_c.py',252),
+  ('expr_2 -> expr_3','expr_2',1,'p_expr_2_3','mini_c.py',263),
+  ('expr_3 -> expr_4 * expr_3','expr_3',3,'p_expr_3_lr','mini_c.py',269),
+  ('expr_3 -> expr_4 / expr_3','expr_3',3,'p_expr_3_lr','mini_c.py',270),
+  ('expr_3 -> expr_4','expr_3',1,'p_expr_3_4','mini_c.py',281),
+  ('expr_4 -> - expr_5','expr_4',2,'p_expr_4','mini_c.py',287),
+  ('expr_4 -> expr_5','expr_4',1,'p_expr_4','mini_c.py',288),
+  ('expr_5 -> variable_or_pointer INCR','expr_5',2,'p_expr_5_incr','mini_c.py',301),
+  ('expr_5 -> expr_6','expr_5',1,'p_expr_5_6','mini_c.py',311),
+  ('expr_6 -> INTEGER','expr_6',1,'p_expr_6','mini_c.py',318),
+  ('expr_6 -> variable_or_pointer','expr_6',1,'p_expr_6','mini_c.py',319),
+  ('expr_6 -> function_call','expr_6',1,'p_expr_6','mini_c.py',320),
+  ('expr_6 -> array','expr_6',1,'p_expr_6','mini_c.py',321),
+  ('expr_6 -> ( expr_1 )','expr_6',3,'p_expr_6','mini_c.py',322),
+  ('if_clause -> IF ( expr_1 ) { body }','if_clause',7,'p_if_only','mini_c.py',334),
+  ('for_loop -> FOR ( assignment expr_1 ; expr_1 ) { body }','for_loop',10,'p_for_loop','mini_c.py',346),
+  ('function_call -> VARIABLE ( arguments_call )','function_call',4,'p_function_call','mini_c.py',359),
+  ('arguments_call -> expr_1','arguments_call',1,'p_arguments_names_call_one','mini_c.py',363),
+  ('arguments_call -> expr_1 , arguments_call','arguments_call',3,'p_arguments_names_call_recursion','mini_c.py',367),
+  ('array -> VARIABLE [ expr_1 ]','array',4,'p_array','mini_c.py',373),
+  ('empty -> <empty>','empty',0,'p_empty','mini_c.py',379),
 ]
