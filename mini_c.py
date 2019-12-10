@@ -180,6 +180,10 @@ def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
     p[0] = { 'type' : p[1], 'variables': p[2] }
 
+def p_declaration_error_semicolon(p):
+    '''declaration : TYPE variable_list '''
+    p[0] = { 'error' : 'missing semicolon' }
+
 def p_variable_list_one(p):
     '''
     variable_list : variable_or_pointer
@@ -200,6 +204,13 @@ def p_assignment(p):
                | array '=' expr_1 ';'
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
+
+def p_assignment_error_expr(p):
+    '''
+    assignment : variable_or_pointer '=' error ';'
+               | array '=' error ';'
+    '''
+    p[0] = { 'error' : 'incorrect expression' }
 
 def p_assignment_address(p):
     '''
@@ -378,6 +389,18 @@ def p_for_loop(p):
             'body' : p[9]
             }
 
+def p_for_loop_error_open_bracket(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' body '}'
+    '''
+    p[0] = { 'error' : 'missing opening bracket' }
+
+def p_for_loop_error_close_bracket(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body
+    '''
+    p[0] = { 'error' : 'missing opening bracket' }
+
 ### Function call ###
 
 def p_function_call(p):
@@ -413,8 +436,8 @@ parser = yacc.yacc()
 
 data = \
 r"""int main(void){
-    int a[5], a;
-    a[5] = &f;
+    int a[5], a
+    a[5] = a b;
 }
 """
 
