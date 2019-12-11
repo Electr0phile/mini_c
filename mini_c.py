@@ -3,11 +3,15 @@
 t_INTEGER   = r'([1-9][0-9]*|0)'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
-t_DIGIT_STRING = r'"%d"'
-t_FLOAT_STRING = r'f'
+t_DIGIT_STRING = r'"%d[\\]n"'
+t_FLOAT_STRING = r'"%f[\\]n"'
+t_STRING = r'"[a-zA-Z_0-9\*\\ ]*"'
+
+
 
 # Literals are used in productions as is
 literals = '[]{}(),;=><-*/&"'
+
 
 # All types are treated as TYPE tokens
 reserved = {
@@ -27,6 +31,7 @@ tokens = [
         'INCR',
         'DIGIT_STRING',
         'FLOAT_STRING',
+        'STRING',
         ] + list(reserved.values())
 
 # Since types are captured by variable regexp,
@@ -94,7 +99,7 @@ def p_function_body(p):
     ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
     p[0] = {
             'function_name': p[2],
-            'span': (p.lineno(1), p.lineno(8)),
+            'span': p.linespan(0),
             'return_type': p[1],
             'arguments': p[4],
             'body' : p[7],
@@ -142,19 +147,19 @@ def p_body_empty(p):
 
 def p_line_declaration(p):
     'line : declaration'
-    p[0] = { 'span': p[1][0], 'type':'declaration', 'value' : p[1][1] }
+    p[0] = { 'span': p.linespan(0), 'type':'declaration', 'value' : p[1] }
 
 def p_line_assignment(p):
     'line : assignment'
-    p[0] = { 'span' : p[1][0], 'type':'assignment', 'value' : p[1][1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'assignment', 'value' : p[1] }
 
 def p_line_if_clause(p):
     'line : if_clause'
-    p[0] = { 'span' : p[1]['span'], 'type':'if_clause', 'value' : p[1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'if_clause', 'value' : p[1] }
 
 def p_line_for_loop(p):
     'line : for_loop'
-    p[0] = { 'span' : p[1]['span'], 'type':'for_loop', 'value' : p[1] }
+    p[0] = { 'span' : p.linespan(0), 'type':'for_loop', 'value' : p[1] }
 
 def p_line_expr(p):
     ' line : expr_line '
@@ -173,23 +178,46 @@ def p_line_printf(p):
 
 def p_declaration(p):
     '''declaration : TYPE variable_list ';' '''
-    p[0] = ( (p.lineno(1), p.lineno(3)), { 'type' : p[1], 'variables': p[2] })
+    p[0] = { 'type' : p[1], 'variables': p[2] }
+
+def p_declaration_error_semicolon(p):
+    '''declaration : TYPE variable_list '''
+    p[0] = { 'error' : 'missing semicolon' }
 
 def p_variable_list_one(p):
-    'variable_list : variable_or_pointer'
+    '''
+    variable_list : variable_or_pointer
+                  | array
+    '''
     p[0] = [p[1]]
 
 def p_variable_list_recursion(p):
-    '''variable_list : variable_or_pointer ',' variable_list '''
+    '''
+    variable_list : variable_or_pointer ',' variable_list
+                  | array ',' variable_list
+    '''
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
-    '''assignment : variable_or_pointer '=' expr_1 ';' '''
-    p[0] = ( (p.lineno(1), p.lineno(4)), { 'variable' : p[1], 'expression': p[3] })
+    '''
+    assignment : variable_or_pointer '=' expr_1 ';'
+               | array '=' expr_1 ';'
+    '''
+    p[0] = { 'variable' : p[1], 'expression': p[3] }
+
+def p_assignment_error_expr(p):
+    '''
+    assignment : variable_or_pointer '=' error ';'
+               | array '=' error ';'
+    '''
+    p[0] = { 'error' : 'incorrect expression' }
 
 def p_assignment_address(p):
-    '''assignment : variable_or_pointer '=' '&' VARIABLE ';' '''
-    p[0] = ( (p.lineno(1), p.lineno(5)), { 'variable' : p[1], 'expression': ('&', p[4]) })
+    '''
+    assignment : variable_or_pointer '=' '&' VARIABLE ';'
+               | array '=' '&' VARIABLE ';'
+    '''
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
     ''' return_expr : RETURN expr_1 ';' '''
@@ -205,14 +233,24 @@ def p_expr_line(p):
 
 def p_printf_expr_digit_float(p):
     '''
-    printf_expr : PRINTF '('  DIGIT_STRING  ',' expr_1 ')' ';'
-               | PRINTF '(' '"' FLOAT_STRING '"' ',' expr_1 ')' ';'
-    '''
-    if p[3][2] == 'd':
-        p[0] = { 'digit': p[5] }
-    else:
-        p[0] = { 'float': p[6] }
+    printf_expr : PRINTF '(' STRING  ')' ';'
+                | PRINTF '(' digit ')' ';'
+                | PRINTF '(' float ')' ';'
 
+    '''
+    p[0] = p[3]
+
+def p_print_digit(p):
+    '''
+    digit : DIGIT_STRING ',' expr_1
+    '''
+    p[0] = {'digit' : p[3]}
+
+def p_print_float(p):
+    '''
+    float : FLOAT_STRING ',' expr_1
+    '''
+    p[0] = {'float' : p[3]}
 
 ### Pointers and variables ###
 
@@ -335,7 +373,6 @@ def p_if_only(p):
     '''
     p[0] = {
             'expression' : p[3],
-            'span' : (p.lineno(1), p.lineno(7)),
             'body' : p[6],
             }
 
@@ -349,9 +386,20 @@ def p_for_loop(p):
             'initialization' : p[3],
             'condition' : p[4],
             'operation' : p[6],
-            'span' : (p.lineno(1), p.lineno(10)),
             'body' : p[9]
             }
+
+def p_for_loop_error_open_bracket(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' body '}'
+    '''
+    p[0] = { 'error' : 'missing opening bracket' }
+
+def p_for_loop_error_close_bracket(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body
+    '''
+    p[0] = { 'error' : 'missing opening bracket' }
 
 ### Function call ###
 
@@ -380,10 +428,12 @@ def p_empty(p):
     pass
 
 def p_error(t):
+    print(t.lexpos)
     print("Syntax error at '%s'" % t.value)
 
 import ply.yacc as yacc
 parser = yacc.yacc()
+
 
 
 test_file = open("test.txt", "r")
