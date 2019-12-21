@@ -6,8 +6,8 @@ t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
 t_DIGIT_STRING = r'"%d[\\]n"'
 t_FLOAT_STRING = r'"%f[\\]n"'
-t_STRING = r'"[a-zA-Z_0-9\*\\\:\.! ]*"' # TODO: add more symbols
-
+t_STRING = r'"[a-zA-Z_0-9\*\\\:\.!?@#$%^&\(\)-_=\[\]/\+\{\}~`,<>; ]*"' # TODO: add more symbols
+ 
 
 
 # Literals are used in productions as is
@@ -112,7 +112,7 @@ def p_argunments_names_one(p):
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
 
 def p_arguments_names_recursion(p):
-    ''' arguments : type_num variable_or_pointer ',' arguments '''
+    ''' arguments : type_num variable_or_pointer comma arguments '''
     p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
 
 def p_argunments_types_void(p):
@@ -186,8 +186,8 @@ def p_variable_list_one(p):
 
 def p_variable_list_recursion(p):
     '''
-    variable_list : variable_or_pointer ',' variable_list
-                  | array ',' variable_list
+    variable_list : variable_or_pointer comma variable_list
+                  | array comma variable_list
     '''
     p[0] = [p[1]] + p[3]
 
@@ -228,13 +228,13 @@ def p_printf_expr_digit_float(p):
 
 def p_print_digit(p):
     '''
-    digit_print : DIGIT_STRING ',' expr_1
+    digit_print : DIGIT_STRING comma expr_1
     '''
     p[0] = {'digit' : p[3]}
 
 def p_print_float(p):
     '''
-    float_print : FLOAT_STRING ',' expr_1
+    float_print : FLOAT_STRING comma expr_1
     '''
     p[0] = {'float' : p[3]}
 
@@ -249,7 +249,6 @@ def p_pointer(p):
         p[0] = ('*', p[2])
     else:
         p[0] = (None, p[1])
-
 
 ### Expression handler ###
 
@@ -387,7 +386,7 @@ def p_arguments_names_call_one(p):
     p[0] = [{ 'expression': p[1] }]
 
 def p_arguments_names_call_recursion(p):
-    ''' arguments_call : expr_1 ',' arguments_call '''
+    ''' arguments_call : expr_1 comma arguments_call '''
     p[0] = [{ 'expression': p[1]}] + p[3]
 
 ### Arrays ###
@@ -461,6 +460,12 @@ def p_semicolon(p):
     if p[1] != ';':
         ERRORS.append( ( p.lineno(0), "Missing semicolon!" ) )
 
+def p_comma(p):
+    ''' comma : ','
+              | empty '''
+    if p[1] != ',':
+        ERRORS.append( ( p.lineno(0), "Missing comma!" ) )
+
 ### Helpers ###
 
 def p_empty(p):
@@ -475,19 +480,15 @@ def p_error(t):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-'''
 data = \
-r"""int main (void) {
+r"""int main (int 6) {
     float a;
-    a = 0.1543253;
-    for ( i = 0 ; i < 1 ; i++ ) {
-        a = 10; b = 3;
-    }
 }
 """
-'''
 
+'''
 data = open('example_codes/input.txt', 'r').read()
+'''
 
 parser.parse(data, tracking=True)
 
