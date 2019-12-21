@@ -87,11 +87,11 @@ class Assignment:
 		if isinstance(self.var, dict): # when it is an array
 			array = symbol_table[self.var['array_name']]
 			index = evaluate(get_expression(self.var['index']))
-			if (index < array.length):
+			if (index < array.length and int(index) == index):
 				eval_res = typecast(array.arrayType, evaluate(self.expr));
 				memory_table[array.startAddress + index] = eval_res
 			else:
-				run_time_error("Array index out of bounds " + self.var['array_name'])
+				run_time_error("Illegal array index, input = " + str(index) + " the size is " + str(array.length))
 
 		current_linenode = assignment_linenode
 		get_to_next_linenode()
@@ -183,9 +183,12 @@ class Declaration:
 			if isinstance(var, dict): # when it is an array 
 				arr_name = var['array_name']
 				arr_size = evaluate(get_expression(var['index']))
-				symbol_table[arr_name] = Array(self.vartype, len(memory_table), arr_size)
-				for i in range(arr_size):
-					memory_table.append('0')
+				if (int(arr_size) == arr_size):
+					symbol_table[arr_name] = Array(self.vartype, len(memory_table), arr_size)
+					for i in range(arr_size):
+						memory_table.append('0')
+				else:
+					run_time_error("Array index should be an integer but given " + str(arr_size))
 
 			#var = [null, name]
 			else:
@@ -398,10 +401,10 @@ def evaluate(expr):
 	if isinstance(expr, dict): # array indexing
 		array = symbol_table[expr['array_name']]
 		index = evaluate(get_expression(expr['index']))
-		if (index < array.length):
+		if (index < array.length and int(index) == index):
 			return memory_table[array.startAddress+index]
 		else:
-			run_time_error("array index out of range, input = " + str(index) + " the size is " + str(arry.length))
+			run_time_error("Illegal array index, input = " + str(index) + " the size is " + str(array.length))
 	if isinstance(expr, FunctionCall):
 		if current_linenode != None:
 			return_node_stack.append(current_linenode.next);
