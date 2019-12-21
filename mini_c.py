@@ -1,6 +1,7 @@
 # Tokens
 
-t_INTEGER   = r'([1-9][0-9]*|0)'
+t_INTEGER   = r'\d+'
+t_FLOAT     = r'\d*\.\d+'
 t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
 t_DIGIT_STRING = r'"%d[\\]n"'
@@ -15,9 +16,9 @@ literals = '[]{}(),;=><-*/&"'
 
 # All types are treated as TYPE tokens
 reserved = {
-            'int' : 'TYPE',
-            'float' : 'TYPE',
-            'void' : 'TYPE',
+            'int' : 'INT_TYPE',
+            'float' : 'FLOAT_TYPE',
+            'void' : 'VOID_TYPE',
             'if'    : 'IF',
             'for'    : 'FOR',
             'return' : 'RETURN',
@@ -26,6 +27,7 @@ reserved = {
 
 tokens = [
         'INTEGER',
+        'FLOAT',
         'VARIABLE',
         'PLUS',
         'INCR',
@@ -69,6 +71,7 @@ lexer = lex.lex()
 
 # Root structure of abstract synthax tree is a list of function definitions
 AST = []
+ERRORS = []
 
 ### Function list level ###
 
@@ -83,7 +86,6 @@ def p_function_list_empty(p):
     ' function_list : empty '
     pass
 
-
 ### Function definition level ###
 
 # At this level we parse a function. Function is
@@ -96,7 +98,7 @@ def p_function_list_empty(p):
 #  'body' - list of lines
 
 def p_function_body(p):
-    ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
+    ''' function : type_func VARIABLE rbl arguments rbr cbl body cbr '''
     p[0] = {
             'function_name': p[2],
             'span': p.linespan(0),
@@ -106,21 +108,16 @@ def p_function_body(p):
             }
 
 def p_argunments_names_one(p):
-    ''' arguments : TYPE variable_or_pointer '''
+    ''' arguments : type_num variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
 
 def p_arguments_names_recursion(p):
-    ''' arguments : TYPE variable_or_pointer ',' arguments '''
+    ''' arguments : type_num variable_or_pointer ',' arguments '''
     p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
 
-def p_argunments_types_one(p):
-    ''' arguments : TYPE '''
+def p_argunments_types_void(p):
+    ''' arguments : VOID_TYPE '''
     p[0] = [{ 'type': p[1] }]
-
-def p_arguments_types_recursion(p):
-    ''' arguments : TYPE ',' arguments '''
-    p[0] = [{ 'type': p[1]}] + p[3]
-
 
 ### Function body level ###
 
@@ -177,12 +174,8 @@ def p_line_printf(p):
 ### Line expansions ###
 
 def p_declaration(p):
-    '''declaration : TYPE variable_list ';' '''
+    '''declaration : type_num variable_list semicolon '''
     p[0] = { 'type' : p[1], 'variables': p[2] }
-
-def p_declaration_error_semicolon(p):
-    '''declaration : TYPE variable_list '''
-    p[0] = { 'error' : 'missing semicolon' }
 
 def p_variable_list_one(p):
     '''
@@ -200,55 +193,48 @@ def p_variable_list_recursion(p):
 
 def p_assignment(p):
     '''
-    assignment : variable_or_pointer '=' expr_1 ';'
-               | array '=' expr_1 ';'
+    assignment : variable_or_pointer '=' expr_1 semicolon
+               | array '=' expr_1 semicolon
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
 
-def p_assignment_error_expr(p):
-    '''
-    assignment : variable_or_pointer '=' error ';'
-               | array '=' error ';'
-    '''
-    p[0] = { 'error' : 'incorrect expression' }
-
 def p_assignment_address(p):
     '''
-    assignment : variable_or_pointer '=' '&' VARIABLE ';'
-               | array '=' '&' VARIABLE ';'
+    assignment : variable_or_pointer '=' '&' VARIABLE semicolon
+               | array '=' '&' VARIABLE semicolon
     '''
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
-    ''' return_expr : RETURN expr_1 ';' '''
+    ''' return_expr : RETURN expr_1 semicolon '''
     p[0] = { 'expression': p[2] }
 
 def p_return_expr_empty(p):
-    ''' return_expr : RETURN ';' '''
+    ''' return_expr : RETURN semicolon '''
     p[0] = { 'expression': None }
 
 def p_expr_line(p):
-    ''' expr_line : expr_1 ';' '''
+    ''' expr_line : expr_1 semicolon '''
     p[0] = { 'expression': p[1] }
 
 def p_printf_expr_digit_float(p):
     '''
-    printf_expr : PRINTF '(' STRING  ')' ';'
-                | PRINTF '(' digit ')' ';'
-                | PRINTF '(' float ')' ';'
+    printf_expr : PRINTF rbl STRING  rbr semicolon
+                | PRINTF rbl digit_print rbr semicolon
+                | PRINTF rbl float_print rbr semicolon
 
     '''
     p[0] = p[3]
 
 def p_print_digit(p):
     '''
-    digit : DIGIT_STRING ',' expr_1
+    digit_print : DIGIT_STRING ',' expr_1
     '''
     p[0] = {'digit' : p[3]}
 
 def p_print_float(p):
     '''
-    float : FLOAT_STRING ',' expr_1
+    float_print : FLOAT_STRING ',' expr_1
     '''
     p[0] = {'float' : p[3]}
 
@@ -354,6 +340,7 @@ def p_expr_5_6(p):
 def p_expr_6(p):
     '''
     expr_6 : INTEGER
+           | FLOAT
            | variable_or_pointer
            | function_call
            | array
@@ -369,7 +356,7 @@ def p_expr_6(p):
 
 def p_if_only(p):
     '''
-    if_clause : IF '(' expr_1 ')' '{' body '}'
+    if_clause : IF rbl expr_1 rbr cbl body cbr
     '''
     p[0] = {
             'expression' : p[3],
@@ -380,7 +367,7 @@ def p_if_only(p):
 
 def p_for_loop(p):
     '''
-    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
+    for_loop : FOR rbl assignment expr_1 semicolon expr_1 rbr cbl body cbr
     '''
     p[0] = {
             'initialization' : p[3],
@@ -389,22 +376,10 @@ def p_for_loop(p):
             'body' : p[9]
             }
 
-def p_for_loop_error_open_bracket(p):
-    '''
-    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' body '}'
-    '''
-    p[0] = { 'error' : 'missing opening bracket' }
-
-def p_for_loop_error_close_bracket(p):
-    '''
-    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body
-    '''
-    p[0] = { 'error' : 'missing opening bracket' }
-
 ### Function call ###
 
 def p_function_call(p):
-    '''function_call : VARIABLE '(' arguments_call ')' '''
+    '''function_call : VARIABLE rbl arguments_call rbr '''
     p[0] = { 'function_name': p[1], 'arguments': p[3] }
 
 def p_arguments_names_call_one(p):
@@ -418,8 +393,73 @@ def p_arguments_names_call_recursion(p):
 ### Arrays ###
 
 def p_array(p):
-    ''' array : VARIABLE '[' expr_1 ']' '''
+    ''' array : VARIABLE sbl expr_1 sbr '''
     p[0] = { 'array_name': p[1], 'index': p[3] }
+
+### Error handling nonterminals ###
+
+def p_type_func(p):
+    ''' type_func : INT_TYPE
+                  | FLOAT_TYPE
+                  | VOID_TYPE '''
+    p[0] = p[1]
+
+def p_type_func_error(p):
+    ''' type_func : error '''
+    ERRORS.append( ( p.lineno(0), "Unrecognized type!" ) )
+    p[0] = ""
+
+def p_type_num(p):
+    ''' type_num : INT_TYPE
+                 | FLOAT_TYPE '''
+    p[0] = p[1]
+
+def p_type_num_error(p):
+    ''' type_num : error '''
+    ERRORS.append( ( p.lineno(0), "Unrecognized type!" ) )
+    p[0] = ""
+
+def p_round_bracket_left(p):
+    ''' rbl : '('
+            | empty '''
+    if p[1] != '(':
+        ERRORS.append( ( p.lineno(0), "Missing left paranthesis!" ) )
+
+def p_round_bracket_right(p):
+    ''' rbr : ')'
+            | empty '''
+    if p[1] != ')':
+        ERRORS.append( ( p.lineno(0), "Missing right paranthesis!" ) )
+
+def p_curly_bracket_left(p):
+    ''' cbl : '{'
+            | empty '''
+    if p[1] != '{':
+        ERRORS.append( ( p.lineno(0), "Missing left curly bracket!" ) )
+
+def p_curly_bracket_right(p):
+    ''' cbr : '}'
+            | empty '''
+    if p[1] != '}':
+        ERRORS.append( ( p.lineno(0), "Missing right curly bracket!" ) )
+
+def p_square_bracket_left(p):
+    ''' sbl : '['
+            | empty '''
+    if p[1] != '[':
+        ERRORS.append( ( p.lineno(0), "Missing left square bracket!" ) )
+
+def p_square_bracket_right(p):
+    ''' sbr : ']'
+            | empty '''
+    if p[1] != ']':
+        ERRORS.append( ( p.lineno(0), "Missing right square bracket!" ) )
+
+def p_semicolon(p):
+    ''' semicolon : ';'
+                  | empty '''
+    if p[1] != ';':
+        ERRORS.append( ( p.lineno(0), "Missing semicolon!" ) )
 
 ### Helpers ###
 
@@ -435,14 +475,21 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 data = \
-r"""int main(void){
-    int a[5], a
-    a[5] = a b;
+r"""int main (void) {
+    float a;
+    a = 0.1543253;
+    for ( i = 0 ; i < 1 ; i++ ) {
+        a = 10 b = 3;
+    }
 }
 """
 
 parser.parse(data, tracking=True)
 
 import json
+print("AST:")
 print(json.dumps(AST, indent=2))
+print("ERRORS:")
+print(json.dumps(ERRORS, indent=2))
 print(AST)
+print(ERRORS)
