@@ -6,7 +6,7 @@ t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
 t_DIGIT_STRING = r'"%d[\\]n"'
 t_FLOAT_STRING = r'"%f[\\]n"'
-t_STRING = r'"[a-zA-Z_0-9\*\\ ]*"'
+t_STRING = r'"[a-zA-Z_0-9\*\\\:\.! ]*"' # TODO: add more symbols
 
 
 
@@ -469,20 +469,25 @@ def p_empty(p):
 
 def p_error(t):
     print(t.lexpos)
+    print('Linenumber: ', t.lineno)
     print("Syntax error at '%s'" % t.value)
 
 import ply.yacc as yacc
 parser = yacc.yacc()
 
+'''
 data = \
 r"""int main (void) {
     float a;
     a = 0.1543253;
     for ( i = 0 ; i < 1 ; i++ ) {
-        a = 10 b = 3;
+        a = 10; b = 3;
     }
 }
 """
+'''
+
+data = open('example_codes/input.txt', 'r').read()
 
 parser.parse(data, tracking=True)
 
