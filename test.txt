@@ -13,25 +13,20 @@ int sum(int a, int b) {
 	return c;
 }
 
-int kek(int a, int c) {
+int kek(float *a, int c) {
 	return a;
 	if (a + c > 50) {
 		return 10;
 	}
 }
 
+int change_val(int *kek, int debil) {
+	*kek = debil;
+	return 123;
+}
 int main (void) {
-	int *a, b, c, d, e;
-	a = 5;
-	a = 10;
-	b = 5;
-	if (a > 1) {
-		int b;
-		b = 15;
-		b = 20;
-		a = 30;
-	}
-	b = 10;
-	e = sum(factorial(10), factorial(10));
+	int a, *kek, b;
+	a = 15/2;
+	a = factorial(sum(2, sum(2, 1)));
 }
 

@@ -62,13 +62,14 @@ class Assignment:
 			if self.var[0] == None:#regular case, not a pointer
 				eval_res = evaluate(self.expr)
 				print("assigning to {}, eval_res = {}".format(self.var[1], eval_res))
+				eval_res = typecast(history_table[self.var[1]][0][2], eval_res);
 				#if type(eval_res) == type(lookup_value)
 				memory_table[symbol_table[self.var[1]]] = eval_res
 				print('before error', history_table)
 				print(history_table_stack)
 				print(symbol_table)
 				print(memory_table)
-				history_table[self.var[1]].append(memory_table[symbol_table[self.var[1]]])
+				history_table[self.var[1]].append((eval_res, assignment_linenode.lineno))
 			else:#pointer case with a star in front of it
 				eval_res = evaluate(self.expr)
 				pointer_val = memory_table[symbol_table[self.var[1]]]	
@@ -81,6 +82,41 @@ class Assignment:
 						not_a_pointer_error(pointer_val)
 		current_linenode = assignment_linenode
 		get_to_next_linenode()
+
+class PrintfStatement:
+	def __init__(self, printf_type, val):
+		self.printf_type = printf_type
+		self.val = val;
+	def process(self):
+		cur_str = ''
+		#print(self.val);
+		print(self.printf_type);
+		if self.printf_type == 'str':
+			i = 1;
+			while i < len(self.val) - 1:
+				if self.val[i] == '\\' and self.val[i+1] == 'n':
+					cur_str += '\n'
+					i += 1
+				else:
+					cur_str += self.val[i]
+				i += 1
+			print(cur_str, end = '')
+		else:
+			eval_res = evaluate(self.val)
+			if self.printf_type == 'int':
+				print(int(eval_res))
+			else:
+				print(float(eval_res))
+		get_to_next_linenode()
+
+class ExpressionLine:
+	def __init__(self, expr):
+		self.expr = expr;
+	def process(self):
+		evaluate(self.expr);
+		get_to_next_linenode();
+
+
 
 
 class Expression:
@@ -122,7 +158,7 @@ class Declaration:
 		for var in self.variables:
 			#var = [null, name]
 			symbol_table[var[1]] = len(memory_table);
-			history_table[var[1]] = ['N/A']
+			history_table[var[1]] = [('N/A', current_linenode.lineno, self.vartype)]
 			if var[0] == None:
 				#symbol_table[var[1]] = len(memory_table);
 				memory_table.append('N/A');
@@ -259,6 +295,15 @@ def is_float(expr):
 def is_string(expr):
 	return type(expr) == type('')
 
+def typecast(vartype, val):
+	if isinstance(val, Pointer):
+		return val;
+	if vartype == 'int':
+		return int(val)
+	if vartype == 'float':
+		return float(val)
+
+
 
 #Evaluates expression to some value
 def evaluate(expr):
@@ -293,8 +338,10 @@ def evaluate(expr):
 			#temp_symbol_table[current_function.arguments[i]['variable'][1]] = 
 			eval_res = evaluate(argexpr)
 			var = current_function.arguments[i]['variable']
+			vartype = current_function.arguments[i]['type']
 			temp_symbol_table[var[1]] = len(memory_table);
-			temp_history_table[var[1]] = [eval_res]
+			eval_res = typecast(vartype, eval_res)
+			temp_history_table[var[1]] = [(eval_res, current_function.start.lineno, vartype)]
 			if var[0] == None:
 				#symbol_table[var[1]] = len(memory_table);
 				memory_table.append(eval_res);
@@ -366,6 +413,20 @@ def get_op(line_info):
 	if line_info['type'] == 'return':
 		expr = line_info['value']['expression']
 		return ReturnStatement(get_expression(expr))
+	if line_info['type'] == 'printf':
+		val = line_info['value']
+		if isinstance(val, str):
+			return PrintfStatement(printf_type = 'str', val = val)
+		else:
+			if 'float' in val:
+				return PrintfStatement(printf_type = 'float', val = get_expression(val['float']))
+			elif 'digit' in val:
+				return PrintfStatement(printf_type = 'int', val = get_expression(val['digit']))
+	if line_info['type'] == 'expr_line':
+		expr = line_info['value']['expression'];
+		return ExpressionLine(get_expression(expr))
+
+
 
 
 def get_flow_graph(body):
