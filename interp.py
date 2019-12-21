@@ -113,7 +113,10 @@ class ExpressionLine:
 	def __init__(self, expr):
 		self.expr = expr;
 	def process(self):
+		global current_linenode;
+		expr_linenode = current_linenode
 		evaluate(self.expr);
+		current_linenode = expr_linenode
 		get_to_next_linenode();
 
 
