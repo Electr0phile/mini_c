@@ -16,6 +16,9 @@ rax = 0 #function return values stored here
 current_linenode = None
 
 
+def run_time_error(str):
+	print ("Error!!!! ", str)
+
 # Class Declarations
 class Function:	
 	def __init__(self, name, line_node, arguments):
@@ -56,30 +59,40 @@ class Assignment:
 	def process(self):
 		global current_linenode
 		assignment_linenode = current_linenode;
-		if self.var[1] not in symbol_table:
-			not_declared_error(self.var[1])
-		else:
-			if self.var[0] == None:#regular case, not a pointer
-				eval_res = evaluate(self.expr)
-				print("assigning to {}, eval_res = {}".format(self.var[1], eval_res))
-				eval_res = typecast(history_table[self.var[1]][0][2], eval_res);
-				#if type(eval_res) == type(lookup_value)
-				memory_table[symbol_table[self.var[1]]] = eval_res
-				print('before error', history_table)
-				print(history_table_stack)
-				print(symbol_table)
-				print(memory_table)
-				history_table[self.var[1]].append((eval_res, assignment_linenode.lineno))
-			else:#pointer case with a star in front of it
-				eval_res = evaluate(self.expr)
-				pointer_val = memory_table[symbol_table[self.var[1]]]	
-				if isinstance(pointer_val, Pointer) and pointer_val.addr != None and pointer_val.addr < len(memory_table): 
-					memory_table[pointer_val.addr] = eval_res
-				else:
-					if isinstance(pointer_val, Pointer):
-						invalid_pointer_error(pointer_val)
+		if isinstance(self.var, tuple): # not arrays
+			if self.var[1] not in symbol_table:
+				not_declared_error(self.var[1])
+			else:
+				if self.var[0] == None:#regular case, not a pointer
+					eval_res = evaluate(self.expr)
+					print("assigning to {}, eval_res = {}".format(self.var[1], eval_res))
+					eval_res = typecast(history_table[self.var[1]][0][2], eval_res);
+					#if type(eval_res) == type(lookup_value)
+					memory_table[symbol_table[self.var[1]]] = eval_res
+					print('before error', history_table)
+					print(history_table_stack)
+					print(symbol_table)
+					print(memory_table)
+					history_table[self.var[1]].append((eval_res, assignment_linenode.lineno))
+				else:#pointer case with a star in front of it
+					eval_res = evaluate(self.expr)
+					pointer_val = memory_table[symbol_table[self.var[1]]]	
+					if isinstance(pointer_val, Pointer) and pointer_val.addr != None and pointer_val.addr < len(memory_table): 
+						memory_table[pointer_val.addr] = eval_res
 					else:
-						not_a_pointer_error(pointer_val)
+						if isinstance(pointer_val, Pointer):
+							invalid_pointer_error(pointer_val)
+						else:
+							not_a_pointer_error(pointer_val)
+		if isinstance(self.var, dict): # when it is an array
+			array = symbol_table[self.var['array_name']]
+			index = evaluate(get_expression(self.var['index']))
+			if (index < array.length):
+				eval_res = typecast(array.arrayType, evaluate(self.expr));
+				memory_table[array.startAddress + index] = eval_res
+			else:
+				run_time_error("Array index out of bounds " + self.var['array_name'])
+
 		current_linenode = assignment_linenode
 		get_to_next_linenode()
 
@@ -139,6 +152,7 @@ def get_expression(expr_dict):
 	if isinstance(expr_dict, tuple):
 		return Expression(None, expr_dict, None)
 	if isinstance(expr_dict, dict):
+
 		if 'variable' in expr_dict: # the for loop initialization expression
 			return Assignment(expr_dict['variable'], expr_dict['expression'])
 
@@ -148,6 +162,9 @@ def get_expression(expr_dict):
 			arguments = [get_expression(arg['expression']) for arg in arguments_dict]
 			left = FunctionCall(function_name, arguments);
 			return Expression(None, left, None);
+		elif 'array_name' in expr_dict:
+			return expr_dict;
+
 		else :
 			left = expr_dict['left']
 			right = expr_dict['right']
@@ -163,14 +180,22 @@ class Declaration:
 		return 'Declaration:' + ' ' + self.vartype + ' ' + str(self.variables);
 	def process(self):
 		for var in self.variables:
+			if isinstance(var, dict): # when it is an array 
+				arr_name = var['array_name']
+				arr_size = evaluate(get_expression(var['index']))
+				symbol_table[arr_name] = Array(self.vartype, len(memory_table), arr_size)
+				for i in range(arr_size):
+					memory_table.append('0')
+
 			#var = [null, name]
-			symbol_table[var[1]] = len(memory_table);
-			history_table[var[1]] = [('N/A', current_linenode.lineno, self.vartype)]
-			if var[0] == None:
-				#symbol_table[var[1]] = len(memory_table);
-				memory_table.append('N/A');
 			else:
-				memory_table.append(Pointer(None));
+				symbol_table[var[1]] = len(memory_table);
+				history_table[var[1]] = [('N/A', current_linenode.lineno, self.vartype)]
+				if var[0] == None:
+					#symbol_table[var[1]] = len(memory_table);
+					memory_table.append('N/A');
+				else:
+					memory_table.append(Pointer(None));
 		get_to_next_linenode();
 
 class ReturnStatement:
@@ -205,6 +230,15 @@ class Pointer:
 		self.addr = addr
 	def __str__(self):
 		return 'Pointer with addr: ' + str(self.addr)
+
+class Array:
+	def __init__(self, arrayType, startAddress, length):
+		self.arrayType = arrayType
+		self.startAddress = startAddress
+		self.length = length
+	def __str__(self):
+		return 'Array of type ' + self.arrayType + " starting at " +  str(self.startAddress) + ' with length ' + str(self.length)
+
 
 class IfClause:
 	def __init__(self, expr, body):
@@ -346,21 +380,29 @@ def typecast(vartype, val):
 
 #Evaluates expression to some value
 def evaluate(expr):
+	global current_linenode, symbol_table, history_table
+
 	#print("evaluating", expr)
-	if isinstance(expr, str):
+	if isinstance(expr, str): # immediate value
 		if expr.isdigit():
 			return int(expr)
 		if is_float(expr):
 			return float(expr)
-	if isinstance(expr, tuple):
+	if isinstance(expr, tuple): # Not arrays
 		if expr[0] == None:
 			return lookup_value(expr[1])
 		elif expr[0] == '*':
 			return deref_pointer(lookup_value(expr[1]));
 		elif expr[0] == '&':
 			return Pointer(get_var_address(expr[1]))
+	if isinstance(expr, dict): # array indexing
+		array = symbol_table[expr['array_name']]
+		index = evaluate(get_expression(expr['index']))
+		if (index < array.length):
+			return memory_table[array.startAddress+index]
+		else:
+			run_time_error("array index out of range, input = " + str(index) + " the size is " + str(arry.length))
 	if isinstance(expr, FunctionCall):
-		global current_linenode, symbol_table, history_table
 		if current_linenode != None:
 			return_node_stack.append(current_linenode.next);
 			print('SAVED TO RETURN STACK:', current_linenode.next);
