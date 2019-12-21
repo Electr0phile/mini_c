@@ -107,6 +107,17 @@ def p_function_body(p):
             'body' : p[7],
             }
 
+def p_function_body_error(p):
+    ''' function : type_func VARIABLE rbl error rbr cbl body cbr '''
+    ERRORS.append( ( p.lineno(0), "Error in function arguments" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': {}, # TODO: think about this
+            'body' : p[7],
+            }
+
 def p_argunments_names_one(p):
     ''' arguments : type_num variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
@@ -170,12 +181,22 @@ def p_line_printf(p):
     'line : printf_expr'
     p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
 
+def p_line_error(p):
+    'line : error semicolon'
+    ERRORS.append( ( p.lineno(0), "Unrecognized command!" ) )
+    p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
+
 
 ### Line expansions ###
 
 def p_declaration(p):
     '''declaration : type_num variable_list semicolon '''
     p[0] = { 'type' : p[1], 'variables': p[2] }
+
+def p_declaration_error(p):
+    '''declaration : type_num error semicolon '''
+    ERRORS.append( ( p.lineno(0), "Error in declaration" ) )
+    p[0] = { 'type' : p[1], 'variables': [] }
 
 def p_variable_list_one(p):
     '''
@@ -193,17 +214,31 @@ def p_variable_list_recursion(p):
 
 def p_assignment(p):
     '''
-    assignment : variable_or_pointer '=' expr_1 semicolon
-               | array '=' expr_1 semicolon
+    assignment : variable_or_pointer eq expr_1 semicolon
+               | array eq expr_1 semicolon
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
 
+def p_assignment_error(p):
+    '''
+    assignment : error eq expr_1 semicolon
+    '''
+    ERRORS.append( ( p.lineno(0), "Incorrect left side assignment expression!" ) )
+    p[0] = { 'variable' : "", 'expression': p[3] }
+
 def p_assignment_address(p):
     '''
-    assignment : variable_or_pointer '=' '&' VARIABLE semicolon
-               | array '=' '&' VARIABLE semicolon
+    assignment : variable_or_pointer eq '&' VARIABLE semicolon
+               | array eq '&' VARIABLE semicolon
     '''
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
+
+def p_assignment_address_error(p):
+    '''
+    assignment : error eq '&' VARIABLE semicolon
+    '''
+    ERRORS.append( ( p.lineno(0), "Incorrect left side assignment expression!" ) )
+    p[0] = { 'variable' : "", 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
     ''' return_expr : RETURN expr_1 semicolon '''
@@ -224,6 +259,14 @@ def p_printf_expr_digit_float(p):
                 | PRINTF rbl float_print rbr semicolon
 
     '''
+    p[0] = p[3]
+
+def p_printf_expr_digit_float(p):
+    '''
+    printf_expr : PRINTF rbl error rbr semicolon
+
+    '''
+    ERRORS.append( ( p.lineno(0), "Unrecognized printf function argument!" ) )
     p[0] = p[3]
 
 def p_print_digit(p):
@@ -466,6 +509,12 @@ def p_comma(p):
     if p[1] != ',':
         ERRORS.append( ( p.lineno(0), "Missing comma!" ) )
 
+def p_equality(p):
+    ''' eq : '='
+           | empty '''
+    if p[1] != '=':
+        ERRORS.append( ( p.lineno(0), "Missing equality sign!" ) )
+
 ### Helpers ###
 
 def p_empty(p):
@@ -481,8 +530,9 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 data = \
-r"""int main (int 6) {
+r"""int main (void) {
     float a;
+    a = 2 3;
 }
 """
 
