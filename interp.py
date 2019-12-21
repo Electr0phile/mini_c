@@ -136,16 +136,20 @@ def get_expression(expr_dict):
 	if isinstance(expr_dict, tuple):
 		return Expression(None, expr_dict, None)
 	if isinstance(expr_dict, dict):
-		if 'function_name' in expr_dict:
+		if 'variable' in expr_dict: # the for loop initialization expression
+			return Assignment(expr_dict['variable'], expr_dict['expression'])
+
+		elif 'function_name' in expr_dict:
 			function_name = expr_dict['function_name']
 			arguments_dict = expr_dict['arguments']
 			arguments = [get_expression(arg['expression']) for arg in arguments_dict]
 			left = FunctionCall(function_name, arguments);
 			return Expression(None, left, None);
-		left = expr_dict['left']
-		right = expr_dict['right']
-		op = expr_dict['op']
-		return Expression(op, get_expression(left), get_expression(right)); 
+		else :
+			left = expr_dict['left']
+			right = expr_dict['right']
+			op = expr_dict['op']
+			return Expression(op, get_expression(left), get_expression(right));
 
 
 class Declaration:
@@ -213,11 +217,12 @@ class IfClause:
 		#	start = start.next
 		return cur_str;
 	def process(self):
+		global current_linenode
+		main_if_node = current_linenode
 		cond_expr_val = evaluate(self.expr);
 		print("condition is:", cond_expr_val)
 		if cond_expr_val:
 			print('condition is true')
-			global current_linenode
 			symbol_table_stack.append(symbol_table.copy())
 			history_table_stack.append(history_table.copy())
 			self.visited = True
@@ -225,8 +230,39 @@ class IfClause:
 			current_linenode = self.body[0]
 		else:
 			print("Condition is false, so we are going to the next line")
+			current_linenode = main_if_node # Restore the main node
 			get_to_next_linenode();
 			print(current_linenode);
+
+
+class ForLoop:
+	def __init__(self, initialization, condition, update, body):
+		self.initialization = initialization
+		self.condition = condition
+		self.update = update
+		self.body = body
+		self.firstEntry = True
+
+	def __str__(self):
+		return "ForLoop"
+
+	def process(self):
+		global current_linenode
+		for_loop_linenode = current_linenode;
+		if self.firstEntry:
+			print("the for loop initialization is ", self.initialization)
+			self.initialization.process()
+			self.firstEntry = False
+		else:
+			evaluate(self.update)
+
+		satisfied = evaluate(self.condition)
+		if satisfied:
+			print("**********************condition satisfied******************")
+			current_linenode = self.body[0];
+		else:
+			current_linenode = for_loop_linenode;
+			get_to_next_linenode()
 
 
 #looks up the symbol table or tells that there's no such variable
@@ -379,6 +415,13 @@ def evaluate(expr):
 				return evaluate(expr.left) < evaluate(expr.right)
 			if op == '==':
 				return evaluate(expr.left) == evaluate(expr.right)
+			elif op == '++':
+				print ("evaluting the ++ operation on the variable", expr.left.left)
+				print (history_table)
+				print ("the value to be assigned is ", evaluate(Expression ('+', expr.left.left, "1")))
+				Assignment(expr.left.left, Expression('+', expr.left.left, "1")).process()
+				print("Increment complete")
+
 		if op == None:
 			return evaluate(expr.left);			
 
@@ -410,6 +453,15 @@ def get_op(line_info):
 		#print("If body start and end", end = ': ')
 		#print(body[0], body[1])
 		return IfClause(get_expression(expr), body);
+
+	elif line_info['type'] == 'for_loop':
+		initial = get_expression(line_info['value']['initialization'])
+		cond = get_expression(line_info['value']['condition'])
+		updater = get_expression(line_info['value']['operation'])
+		body = get_flow_graph (line_info['value']['body'])
+
+		return ForLoop(initial, cond, updater, body)
+
 	if line_info['type'] == 'return':
 		expr = line_info['value']['expression']
 		return ReturnStatement(get_expression(expr))
@@ -427,8 +479,6 @@ def get_op(line_info):
 		return ExpressionLine(get_expression(expr))
 
 
-
-
 def get_flow_graph(body):
 	line_prev = None 
 	line_start = None;
@@ -437,7 +487,7 @@ def get_flow_graph(body):
 		optype = get_op(line_info);
 		cur_line_node = LineNode(lineno, optype);
 		#print(cur_line_node)
-		if isinstance(cur_line_node.optype, IfClause):
+		if isinstance(cur_line_node.optype, IfClause) or isinstance(cur_line_node.optype, ForLoop):
 			#print('prev_line: ' + str(cur_line_node))
 			cur_line_node.optype.body[1].next = cur_line_node;
 		cur_line_node.next = None;
