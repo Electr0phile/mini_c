@@ -89,7 +89,7 @@ class Assignment:
 			index = evaluate(get_expression(self.var['index']))
 			if (index < array.length and int(index) == index):
 				eval_res = typecast(array.arrayType, evaluate(self.expr));
-				memory_table[array.startAddress + index] = eval_res
+				memory_table[array.startAddress + int(index)] = eval_res
 			else:
 				run_time_error("Illegal array index, input = " + str(index) + " the size is " + str(array.length))
 
@@ -402,7 +402,7 @@ def evaluate(expr):
 		array = symbol_table[expr['array_name']]
 		index = evaluate(get_expression(expr['index']))
 		if (index < array.length and int(index) == index):
-			return memory_table[array.startAddress+index]
+			return memory_table[array.startAddress+int(index)]
 		else:
 			run_time_error("Illegal array index, input = " + str(index) + " the size is " + str(array.length))
 	if isinstance(expr, FunctionCall):
