@@ -419,6 +419,54 @@ def p_printf_expr_digit_float(p):
     '''
     p[0] = p[3]
 
+def p_printf_expr_digit_float_error_1(p):
+    '''
+    printf_expr : error '(' STRING  ')' ';'
+                | error '(' digit ')' ';'
+                | error '(' float ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Wrong function name!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_2(p):
+    '''
+    printf_expr : PRINTF  STRING  ')' ';'
+                | PRINTF  digit ')' ';'
+                | PRINTF  float ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_3(p):
+    '''
+    printf_expr : PRINTF '(' error  ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Wrong printf input!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_4(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ';'
+                | PRINTF '(' digit  ';'
+                | PRINTF '(' float ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_5(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ')'
+                | PRINTF '(' digit ')'
+                | PRINTF '(' float ')'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing semicolon!"))
+    p[0] = None
+
 def p_print_digit(p):
     '''
     digit : DIGIT_STRING ',' expr_1
@@ -554,7 +602,75 @@ def p_if_only(p):
             'expression' : p[3],
             'body' : p[6],
             }
+def p_if_only_error_1(p):
+    '''
+    if_clause : error '(' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append(p.lineno(0), "Keyword Error!")
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
 
+def p_if_only_error_2(p):
+    '''
+    if_clause : IF  expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'expression' : p[2],
+            'body' : p[5],
+            }
+
+def p_if_only_error_3(p):
+    '''
+    if_clause : IF '(' error ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Syntax error in expression!"))
+    p[0] = {
+            'expression' : None,
+            'body' : p[6],
+            }
+
+def p_if_only_error_4(p):
+    '''
+    if_clause : IF '(' expr_1  '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[5],
+            }
+
+def p_if_only_error_5(p):
+    '''
+    if_clause : IF '(' expr_1 ')'  body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left curly brackets!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
+
+def p_if_only_error_6(p):
+    '''
+    if_clause : IF '(' expr_1 ')' '{' error '}'
+    '''
+    ERRORS.append((p.lineno(0), "Unknown error!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : None,
+            }
+
+def p_if_only_error_7(p):
+    '''
+    if_clause : IF '(' expr_1 ')' '{' body
+    '''
+    ERRORS.append((p.lineno(0), "Missing right curly brackets!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
 ### For loops ###
 
 def p_for_loop(p):
@@ -567,23 +683,150 @@ def p_for_loop(p):
             'operation' : p[6],
             'body' : p[9]
             }
-
-def p_for_loop_error_open_bracket(p):
+def p_for_loop_error_1(p):
     '''
-    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' body '}'
+    for_loop : error '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
     '''
-    p[0] = { 'error' : 'missing opening bracket' }
+    ERRORS.append((p.lineno(0), "Keyword Error!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
 
-def p_for_loop_error_close_bracket(p):
+def p_for_loop_error_2(p):
+    '''
+    for_loop : FOR  assignment expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'initialization' : p[2],
+            'condition' : p[3],
+            'operation' : p[5],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_3(p):
+    '''
+    for_loop : FOR '(' error expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in assingment expression!"))
+    p[0] = {
+            'initialization' : None,
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+def p_for_loop_error_4(p):
+    '''
+    for_loop : FOR '(' assignment error ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in condition expression!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : None,
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+def p_for_loop_error_5(p):
+    '''
+    for_loop : FOR '(' assignment expr_1  expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineo(0), "Missing semicolon!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[5],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_6(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' error ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in operation!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : None,
+            'body' : p[9]
+            }
+
+def p_for_loop_error_7(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1  '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_8(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')'  body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left curly brackets"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_9(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' error '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in the for loop body!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : None
+            }
+
+def p_for_loop_error_10(p):
     '''
     for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body
     '''
-    p[0] = { 'error' : 'missing opening bracket' }
+    ERRORS.append((p.lineno(0), "Missing right curly brackets!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
 
 ### Function call ###
 
 def p_function_call(p):
     '''function_call : VARIABLE '(' arguments_call ')' '''
+    p[0] = { 'function_name': p[1], 'arguments': p[3] }
+
+def p_function_call_error_1(p):
+    '''function_call : error '(' arguments_call ')' '''
+    ERRORS.append((p.lineno(0), "Wrong function name!"))
+    p[0] = { 'function_name': None, 'arguments': p[3] }
+
+def p_function_call_error_2(p):
+    '''function_call : VARIABLE  arguments_call ')' '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = { 'function_name': p[1], 'arguments': p[2] }
+
+def p_function_call_error_3(p):
+    '''function_call : VARIABLE '(' error ')' '''
+    ERRORS.append((p.lineno(0), "Wrong arguments!"))
+    p[0] = { 'function_name': p[1], 'arguments': None }
+
+def p_function_call_error_4(p):
+    '''function_call : VARIABLE '(' arguments_call  '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
     p[0] = { 'function_name': p[1], 'arguments': p[3] }
 
 def p_arguments_names_call_one(p):
@@ -612,7 +855,7 @@ def p_error(t):
 
 import ply.yacc as yacc
 parser = yacc.yacc()
-
+print(ERRORS)
 data = \
 r"""int main(void){
     int a[5], a;
@@ -626,3 +869,5 @@ import json
 print(json.dumps(AST, indent=2))
 print(json.dumps(ERRORS, indent=2))
 print(AST)
+print(ERRORS)
+
