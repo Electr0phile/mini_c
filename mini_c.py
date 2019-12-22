@@ -85,6 +85,7 @@ def p_function_list_empty(p):
     ' function_list : empty '
     pass
 
+
 ### Function definition level ###
 
 # At this level we parse a function. Function is
@@ -194,17 +195,6 @@ def p_function_body_error_8(p):
             'body' : p[7],
             }
 
-def p_function_body_error(p):
-    ''' function : type_func VARIABLE rbl error rbr cbl body cbr '''
-    ERRORS.append( ( p.lineno(0), "Error in function arguments" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': {}, # TODO: think about this
-            'body' : p[7],
-            }
-
 def p_argunments_names_one(p):
     ''' arguments : type_var variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
@@ -303,15 +293,15 @@ def p_variable_list_one(p):
 
 def p_variable_list_recursion(p):
     '''
-    variable_list : variable_or_pointer comma variable_list
-                  | array comma variable_list
+    variable_list : variable_or_pointer ',' variable_list
+                  | array ',' variable_list
     '''
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
     '''
-    assignment : variable_or_pointer eq expr_1 semicolon
-               | array eq expr_1 semicolon
+    assignment : variable_or_pointer '=' expr_1 ';'
+               | array '=' expr_1 ';'
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
 
@@ -332,7 +322,8 @@ def p_assignment_error_2(p):
 
 def p_assignment_error_3(p):
     '''
-    assignment : error eq expr_1 semicolon
+    assignment : variable_or_pointer '=' error ';'
+               | array '=' error ';'
     '''
     ERRORS.append( ( p.lineno(0), "Error in expression being assigned!" ) )
     p[0] = { 'variable' : p[1], 'expression': None }
@@ -347,8 +338,8 @@ def p_assignment_error_4(p):
 
 def p_assignment_address(p):
     '''
-    assignment : variable_or_pointer eq '&' VARIABLE semicolon
-               | array eq '&' VARIABLE semicolon
+    assignment : variable_or_pointer '=' '&' VARIABLE ';'
+               | array '=' '&' VARIABLE ';'
     '''
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
@@ -384,7 +375,7 @@ def p_assignment_address_error_4(p):
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
-    ''' return_expr : RETURN expr_1 semicolon '''
+    ''' return_expr : RETURN expr_1 ';' '''
     p[0] = { 'expression': p[2] }
 
 def p_return_expr_error_1(p):
@@ -398,7 +389,7 @@ def p_return_expr_error_2(p):
     p[0] = { 'expression': p[2] }
 
 def p_return_expr_empty(p):
-    ''' return_expr : RETURN semicolon '''
+    ''' return_expr : RETURN ';' '''
     p[0] = { 'expression': None }
 
 def p_return_expr_empty_error_1(p):
@@ -407,7 +398,7 @@ def p_return_expr_empty_error_1(p):
     p[0] = { 'expression': None }
 
 def p_expr_line(p):
-    ''' expr_line : expr_1 semicolon '''
+    ''' expr_line : expr_1 ';' '''
     p[0] = { 'expression': p[1] }
 
 def p_expr_line_error_1(p):
@@ -422,19 +413,11 @@ def p_expr_line_error_2(p):
 
 def p_printf_expr_digit_float(p):
     '''
-    printf_expr : PRINTF rbl STRING  rbr semicolon
-                | PRINTF rbl digit_print rbr semicolon
-                | PRINTF rbl float_print rbr semicolon
+    printf_expr : PRINTF '(' STRING  ')' ';'
+                | PRINTF '(' digit ')' ';'
+                | PRINTF '(' float ')' ';'
 
     '''
-    p[0] = p[3]
-
-def p_printf_expr_digit_float_error(p):
-    '''
-    printf_expr : PRINTF rbl error rbr semicolon
-
-    '''
-    ERRORS.append( ( p.lineno(0), "Unrecognized printf function argument!" ) )
     p[0] = p[3]
 
 def p_printf_expr_digit_float_error_1(p):
@@ -487,13 +470,13 @@ def p_printf_expr_digit_float_error_5(p):
 
 def p_print_digit(p):
     '''
-    digit_print : DIGIT_STRING comma expr_1
+    digit : DIGIT_STRING ',' expr_1
     '''
     p[0] = {'digit' : p[3]}
 
 def p_print_float(p):
     '''
-    float_print : FLOAT_STRING comma expr_1
+    float : FLOAT_STRING ',' expr_1
     '''
     p[0] = {'float' : p[3]}
 
@@ -508,6 +491,7 @@ def p_pointer(p):
         p[0] = ('*', p[2])
     else:
         p[0] = (None, p[1])
+
 
 ### Expression handler ###
 
@@ -614,7 +598,7 @@ def p_expr_6(p):
 
 def p_if_only(p):
     '''
-    if_clause : IF rbl expr_1 rbr cbl body cbr
+    if_clause : IF '(' expr_1 ')' '{' body '}'
     '''
     p[0] = {
             'expression' : p[3],
@@ -693,7 +677,7 @@ def p_if_only_error_7(p):
 
 def p_for_loop(p):
     '''
-    for_loop : FOR rbl assignment expr_1 semicolon expr_1 rbr cbl body cbr
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
     '''
     p[0] = {
             'initialization' : p[3],
@@ -824,7 +808,7 @@ def p_for_loop_error_10(p):
 ### Function call ###
 
 def p_function_call(p):
-    '''function_call : VARIABLE rbl arguments_call rbr '''
+    '''function_call : VARIABLE '(' arguments_call ')' '''
     p[0] = { 'function_name': p[1], 'arguments': p[3] }
 
 def p_arguments_names_call_one(p):
@@ -832,13 +816,13 @@ def p_arguments_names_call_one(p):
     p[0] = [{ 'expression': p[1] }]
 
 def p_arguments_names_call_recursion(p):
-    ''' arguments_call : expr_1 comma arguments_call '''
+    ''' arguments_call : expr_1 ',' arguments_call '''
     p[0] = [{ 'expression': p[1]}] + p[3]
 
 ### Arrays ###
 
 def p_array(p):
-    ''' array : VARIABLE sbl expr_1 sbr '''
+    ''' array : VARIABLE '[' expr_1 ']' '''
     p[0] = { 'array_name': p[1], 'index': p[3] }
 
 ### Types ###
@@ -862,7 +846,6 @@ def p_empty(p):
 
 def p_error(t):
     print(t.lexpos)
-    print('Linenumber: ', t.lineno)
     print("Syntax error at '%s'" % t.value)
 
 import ply.yacc as yacc
@@ -890,8 +873,9 @@ data = open('example_codes/input.txt', 'r').read()
 parser.parse(data, tracking=True)
 
 import json
-print("AST:")
 print(json.dumps(AST, indent=2))
 print(json.dumps(ERRORS, indent=2))
 print(AST)
 print(ERRORS)
+
+
