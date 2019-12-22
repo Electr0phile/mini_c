@@ -69,6 +69,7 @@ lexer = lex.lex()
 
 # Root structure of abstract synthax tree is a list of function definitions
 AST = []
+ERRORS = []
 
 ### Function list level ###
 
@@ -97,6 +98,16 @@ def p_function_list_empty(p):
 
 def p_function_body(p):
     ''' function : TYPE VARIABLE '(' arguments ')' '{' body '}' '''
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_function_body_error_1(p):
+    ''' function : error VARIABLE '(' arguments ')' '{' body '}' '''
     p[0] = {
             'function_name': p[2],
             'span': p.linespan(0),
@@ -437,7 +448,7 @@ parser = yacc.yacc()
 data = \
 r"""int main(void){
     int a[5], a
-    a[5] = a b;
+    a[5] = a + b;
 }
 """
 
