@@ -261,7 +261,7 @@ def p_printf_expr_digit_float(p):
     '''
     p[0] = p[3]
 
-def p_printf_expr_digit_float(p):
+def p_printf_expr_digit_float_error(p):
     '''
     printf_expr : PRINTF rbl error rbr semicolon
 
