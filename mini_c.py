@@ -533,6 +533,7 @@ test_file = open("test.txt", "r")
 
 data = test_file.read();
 print(data);
+code_lines = data.split('\n')
 test_file.close();
 
 parser.parse(data, tracking=True)
