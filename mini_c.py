@@ -6,8 +6,7 @@ t_INCR      = r'\+\+'
 t_PLUS      = r'\+'
 t_DIGIT_STRING = r'"%d[\\]n"'
 t_FLOAT_STRING = r'"%f[\\]n"'
-t_STRING = r'"[a-zA-Z_0-9\*\\\:\.!?@#$%^&\(\)-_=\[\]/\+\{\}~`,<>; ]*"' # TODO: add more symbols
- 
+t_STRING = r'"[a-zA-Z_0-9\*\\\:\.!?@#$^&\(\)-_=\[\]/\+\{\}~`,<>; ]*"' # TODO: add more symbols
 
 
 # Literals are used in productions as is
@@ -86,6 +85,7 @@ def p_function_list_empty(p):
     ' function_list : empty '
     pass
 
+
 ### Function definition level ###
 
 # At this level we parse a function. Function is
@@ -98,7 +98,7 @@ def p_function_list_empty(p):
 #  'body' - list of lines
 
 def p_function_body(p):
-    ''' function : type_func VARIABLE rbl arguments rbr cbl body cbr '''
+    ''' function : type_func VARIABLE '(' arguments ')' '{' body '}' '''
     p[0] = {
             'function_name': p[2],
             'span': p.linespan(0),
@@ -107,26 +107,103 @@ def p_function_body(p):
             'body' : p[7],
             }
 
-def p_function_body_error(p):
-    ''' function : type_func VARIABLE rbl error rbr cbl body cbr '''
-    ERRORS.append( ( p.lineno(0), "Error in function arguments" ) )
+def p_function_body_error_1(p):
+    ''' function : error VARIABLE '(' arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Function type unrecognized!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': None,
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_function_body_error_2(p):
+    ''' function : type_func error '(' arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Wrong function name!" ) )
+    p[0] = {
+            'function_name': None,
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_function_body_error_3(p):
+    ''' function : type_func VARIABLE arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing left paranthesis in function declaration!" ) )
     p[0] = {
             'function_name': p[2],
             'span': p.linespan(0),
             'return_type': p[1],
-            'arguments': {}, # TODO: think about this
+            'arguments': p[3],
+            'body' : p[6],
+            }
+
+def p_function_body_error_4(p):
+    ''' function : type_func VARIABLE '(' error ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Incorrect arguments!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': None,
+            'body' : p[7],
+            }
+
+def p_function_body_error_5(p):
+    ''' function : type_func VARIABLE '(' arguments '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing right paranthesis in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[6],
+            }
+
+def p_function_body_error_6(p):
+    ''' function : type_func VARIABLE '(' arguments ')' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing left curly bracket in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[6],
+            }
+
+def p_function_body_error_7(p):
+    ''' function : type_func VARIABLE '(' arguments ')' '{' error '}' '''
+    ERRORS.append( ( p.lineno(0), "Something wrong in the body of a function!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : None,
+            }
+
+def p_function_body_error_8(p):
+    ''' function : type_func VARIABLE '(' arguments ')' '{' body '''
+    ERRORS.append( ( p.lineno(0), "Missing right curly bracket in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
             'body' : p[7],
             }
 
 def p_argunments_names_one(p):
-    ''' arguments : type_num variable_or_pointer '''
+    ''' arguments : type_var variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
 
 def p_arguments_names_recursion(p):
-    ''' arguments : type_num variable_or_pointer comma arguments '''
+    ''' arguments : type_var variable_or_pointer ',' arguments '''
     p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
 
-def p_argunments_types_void(p):
+def p_arguments_void(p):
     ''' arguments : VOID_TYPE '''
     p[0] = [{ 'type': p[1] }]
 
@@ -182,21 +259,30 @@ def p_line_printf(p):
     p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
 
 def p_line_error(p):
-    'line : error semicolon'
-    ERRORS.append( ( p.lineno(0), "Unrecognized command!" ) )
-    p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
-
+    "line : error ';' "
+    ERRORS.append( ( p.lineno(0), "Unrecognized line type!" ) )
+    p[0] = { 'span' : p.linespan(0), 'type': None, 'value': None}
 
 ### Line expansions ###
 
 def p_declaration(p):
-    '''declaration : type_num variable_list semicolon '''
+    '''declaration : type_var variable_list ';' '''
     p[0] = { 'type' : p[1], 'variables': p[2] }
 
-def p_declaration_error(p):
-    '''declaration : type_num error semicolon '''
-    ERRORS.append( ( p.lineno(0), "Error in declaration" ) )
-    p[0] = { 'type' : p[1], 'variables': [] }
+def p_declaration_error_1(p):
+    '''declaration : error variable_list ';' '''
+    ERRORS.append( ( p.lineno(0), "Declaration type unrecognized!" ) )
+    p[0] = { 'type' : None, 'variables': p[2] }
+
+def p_declaration_error_2(p):
+    '''declaration : type_var error ';' '''
+    ERRORS.append( ( p.lineno(0), "declaration variable list is not recognized!" ) )
+    p[0] = { 'type' : p[1], 'variables': None }
+
+def p_declaration_error_3(p):
+    '''declaration : type_var variable_list '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in variable declaration!" ) )
+    p[0] = { 'type' : p[1], 'variables': p[2] }
 
 def p_variable_list_one(p):
     '''
@@ -207,77 +293,190 @@ def p_variable_list_one(p):
 
 def p_variable_list_recursion(p):
     '''
-    variable_list : variable_or_pointer comma variable_list
-                  | array comma variable_list
+    variable_list : variable_or_pointer ',' variable_list
+                  | array ',' variable_list
     '''
     p[0] = [p[1]] + p[3]
 
 def p_assignment(p):
     '''
-    assignment : variable_or_pointer eq expr_1 semicolon
-               | array eq expr_1 semicolon
+    assignment : variable_or_pointer '=' expr_1 ';'
+               | array '=' expr_1 ';'
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
 
-def p_assignment_error(p):
+def p_assignment_error_1(p):
     '''
-    assignment : error eq expr_1 semicolon
+    assignment : error '=' expr_1 ';'
     '''
-    ERRORS.append( ( p.lineno(0), "Incorrect left side assignment expression!" ) )
-    p[0] = { 'variable' : "", 'expression': p[3] }
+    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
+    p[0] = { 'variable' : None, 'expression': p[3] }
+
+def p_assignment_error_2(p):
+    '''
+    assignment : variable_or_pointer expr_1 ';'
+               | array expr_1 ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': p[2] }
+
+def p_assignment_error_3(p):
+    '''
+    assignment : variable_or_pointer '=' error ';'
+               | array '=' error ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Error in expression being assigned!" ) )
+    p[0] = { 'variable' : p[1], 'expression': None }
+
+def p_assignment_error_4(p):
+    '''
+    assignment : variable_or_pointer '=' expr_1
+               | array '=' expr_1
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': p[3] }
 
 def p_assignment_address(p):
     '''
-    assignment : variable_or_pointer eq '&' VARIABLE semicolon
-               | array eq '&' VARIABLE semicolon
+    assignment : variable_or_pointer '=' '&' VARIABLE ';'
+               | array '=' '&' VARIABLE ';'
     '''
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
-def p_assignment_address_error(p):
+def p_assignment_address_error_1(p):
     '''
-    assignment : error eq '&' VARIABLE semicolon
+    assignment : error '=' '&' VARIABLE ';'
     '''
-    ERRORS.append( ( p.lineno(0), "Incorrect left side assignment expression!" ) )
-    p[0] = { 'variable' : "", 'expression': ('&', p[4]) }
+    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
+    p[0] = { 'variable' : None, 'expression': ('&', p[4]) }
+
+def p_assignment_address_error_2(p):
+    '''
+    assignment : variable_or_pointer '&' VARIABLE ';'
+               | array '&' VARIABLE ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[3]) }
+
+def p_assignment_address_error_3(p):
+    '''
+    assignment : variable_or_pointer '=' '&' error ';'
+               | array '=' '&' error ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Illegal assignment expression, you can only reference a variable!" ) )
+    p[0] = { 'variable' : p[1], 'expression': None }
+
+def p_assignment_address_error_4(p):
+    '''
+    assignment : variable_or_pointer '=' '&' VARIABLE
+               | array '=' '&' VARIABLE
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
 def p_return_expr(p):
-    ''' return_expr : RETURN expr_1 semicolon '''
+    ''' return_expr : RETURN expr_1 ';' '''
+    p[0] = { 'expression': p[2] }
+
+def p_return_expr_error_1(p):
+    ''' return_expr : RETURN error ';' '''
+    ERRORS.append( ( p.lineno(0), "You can only return an expression!" ) )
+    p[0] = { 'expression': None }
+
+def p_return_expr_error_2(p):
+    ''' return_expr : RETURN expr_1 '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
     p[0] = { 'expression': p[2] }
 
 def p_return_expr_empty(p):
-    ''' return_expr : RETURN semicolon '''
+    ''' return_expr : RETURN ';' '''
+    p[0] = { 'expression': None }
+
+def p_return_expr_empty_error_1(p):
+    ''' return_expr : RETURN '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
     p[0] = { 'expression': None }
 
 def p_expr_line(p):
-    ''' expr_line : expr_1 semicolon '''
+    ''' expr_line : expr_1 ';' '''
     p[0] = { 'expression': p[1] }
+
+def p_expr_line_error_1(p):
+    ''' expr_line : expr_1 '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in expression statement!" ) )
+    p[0] = { 'expression': p[1] }
+
+def p_expr_line_error_2(p):
+    ''' expr_line : error ';' '''
+    ERRORS.append( ( p.lineno(0), "Wrong expression!" ) )
+    p[0] = { 'expression': None }
 
 def p_printf_expr_digit_float(p):
     '''
-    printf_expr : PRINTF rbl STRING  rbr semicolon
-                | PRINTF rbl digit_print rbr semicolon
-                | PRINTF rbl float_print rbr semicolon
+    printf_expr : PRINTF '(' STRING  ')' ';'
+                | PRINTF '(' digit ')' ';'
+                | PRINTF '(' float ')' ';'
 
     '''
     p[0] = p[3]
 
-def p_printf_expr_digit_float_error(p):
+def p_printf_expr_digit_float_error_1(p):
     '''
-    printf_expr : PRINTF rbl error rbr semicolon
+    printf_expr : error '(' STRING  ')' ';'
+                | error '(' digit ')' ';'
+                | error '(' float ')' ';'
 
     '''
-    ERRORS.append( ( p.lineno(0), "Unrecognized printf function argument!" ) )
-    p[0] = p[3]
+    ERRORS.append((p.lineno(0), "Wrong function name!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_2(p):
+    '''
+    printf_expr : PRINTF  STRING  ')' ';'
+                | PRINTF  digit ')' ';'
+                | PRINTF  float ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_3(p):
+    '''
+    printf_expr : PRINTF '(' error  ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Wrong printf input!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_4(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ';'
+                | PRINTF '(' digit  ';'
+                | PRINTF '(' float ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_5(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ')'
+                | PRINTF '(' digit ')'
+                | PRINTF '(' float ')'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing semicolon!"))
+    p[0] = None
 
 def p_print_digit(p):
     '''
-    digit_print : DIGIT_STRING comma expr_1
+    digit : DIGIT_STRING ',' expr_1
     '''
     p[0] = {'digit' : p[3]}
 
 def p_print_float(p):
     '''
-    float_print : FLOAT_STRING comma expr_1
+    float : FLOAT_STRING ',' expr_1
     '''
     p[0] = {'float' : p[3]}
 
@@ -292,6 +491,7 @@ def p_pointer(p):
         p[0] = ('*', p[2])
     else:
         p[0] = (None, p[1])
+
 
 ### Expression handler ###
 
@@ -398,19 +598,206 @@ def p_expr_6(p):
 
 def p_if_only(p):
     '''
-    if_clause : IF rbl expr_1 rbr cbl body cbr
+    if_clause : IF '(' expr_1 ')' '{' body '}'
     '''
     p[0] = {
             'expression' : p[3],
             'body' : p[6],
             }
+def p_if_only_error_1(p):
+    '''
+    if_clause : error '(' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append(p.lineno(0), "Keyword Error!")
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
 
+def p_if_only_error_2(p):
+    '''
+    if_clause : IF  expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'expression' : p[2],
+            'body' : p[5],
+            }
+
+def p_if_only_error_3(p):
+    '''
+    if_clause : IF '(' error ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Syntax error in expression!"))
+    p[0] = {
+            'expression' : None,
+            'body' : p[6],
+            }
+
+def p_if_only_error_4(p):
+    '''
+    if_clause : IF '(' expr_1  '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[5],
+            }
+
+def p_if_only_error_5(p):
+    '''
+    if_clause : IF '(' expr_1 ')'  body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left curly brackets!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
+
+def p_if_only_error_6(p):
+    '''
+    if_clause : IF '(' expr_1 ')' '{' error '}'
+    '''
+    ERRORS.append((p.lineno(0), "Unknown error!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : None,
+            }
+
+def p_if_only_error_7(p):
+    '''
+    if_clause : IF '(' expr_1 ')' '{' body
+    '''
+    ERRORS.append((p.lineno(0), "Missing right curly brackets!"))
+    p[0] = {
+            'expression' : p[3],
+            'body' : p[6],
+            }
 ### For loops ###
 
 def p_for_loop(p):
     '''
-    for_loop : FOR rbl assignment expr_1 semicolon expr_1 rbr cbl body cbr
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
     '''
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
+def p_for_loop_error_1(p):
+    '''
+    for_loop : error '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Keyword Error!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+def p_for_loop_error_2(p):
+    '''
+    for_loop : FOR  assignment expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'initialization' : p[2],
+            'condition' : p[3],
+            'operation' : p[5],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_3(p):
+    '''
+    for_loop : FOR '(' error expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in assingment expression!"))
+    p[0] = {
+            'initialization' : None,
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+def p_for_loop_error_4(p):
+    '''
+    for_loop : FOR '(' assignment error ';' expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in condition expression!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : None,
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+def p_for_loop_error_5(p):
+    '''
+    for_loop : FOR '(' assignment expr_1  expr_1 ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineo(0), "Missing semicolon!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[5],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_6(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' error ')' '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in operation!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : None,
+            'body' : p[9]
+            }
+
+def p_for_loop_error_7(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1  '{' body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_8(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')'  body '}'
+    '''
+    ERRORS.append((p.lineno(0), "Missing left curly brackets"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[8]
+            }
+
+def p_for_loop_error_9(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' error '}'
+    '''
+    ERRORS.append((p.lineno(0), "Error in the for loop body!"))
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : None
+            }
+
+def p_for_loop_error_10(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body
+    '''
+    ERRORS.append((p.lineno(0), "Missing right curly brackets!"))
     p[0] = {
             'initialization' : p[3],
             'condition' : p[4],
@@ -421,7 +808,7 @@ def p_for_loop(p):
 ### Function call ###
 
 def p_function_call(p):
-    '''function_call : VARIABLE rbl arguments_call rbr '''
+    '''function_call : VARIABLE '(' arguments_call ')' '''
     p[0] = { 'function_name': p[1], 'arguments': p[3] }
 
 def p_arguments_names_call_one(p):
@@ -429,16 +816,16 @@ def p_arguments_names_call_one(p):
     p[0] = [{ 'expression': p[1] }]
 
 def p_arguments_names_call_recursion(p):
-    ''' arguments_call : expr_1 comma arguments_call '''
+    ''' arguments_call : expr_1 ',' arguments_call '''
     p[0] = [{ 'expression': p[1]}] + p[3]
 
 ### Arrays ###
 
 def p_array(p):
-    ''' array : VARIABLE sbl expr_1 sbr '''
+    ''' array : VARIABLE '[' expr_1 ']' '''
     p[0] = { 'array_name': p[1], 'index': p[3] }
 
-### Error handling nonterminals ###
+### Types ###
 
 def p_type_func(p):
     ''' type_func : INT_TYPE
@@ -446,74 +833,10 @@ def p_type_func(p):
                   | VOID_TYPE '''
     p[0] = p[1]
 
-def p_type_func_error(p):
-    ''' type_func : error '''
-    ERRORS.append( ( p.lineno(0), "Unrecognized type!" ) )
-    p[0] = ""
-
-def p_type_num(p):
-    ''' type_num : INT_TYPE
-                 | FLOAT_TYPE '''
+def p_type_var(p):
+    ''' type_var  : INT_TYPE
+                  | FLOAT_TYPE '''
     p[0] = p[1]
-
-def p_type_num_error(p):
-    ''' type_num : error '''
-    ERRORS.append( ( p.lineno(0), "Unrecognized type!" ) )
-    p[0] = ""
-
-def p_round_bracket_left(p):
-    ''' rbl : '('
-            | empty '''
-    if p[1] != '(':
-        ERRORS.append( ( p.lineno(0), "Missing left paranthesis!" ) )
-
-def p_round_bracket_right(p):
-    ''' rbr : ')'
-            | empty '''
-    if p[1] != ')':
-        ERRORS.append( ( p.lineno(0), "Missing right paranthesis!" ) )
-
-def p_curly_bracket_left(p):
-    ''' cbl : '{'
-            | empty '''
-    if p[1] != '{':
-        ERRORS.append( ( p.lineno(0), "Missing left curly bracket!" ) )
-
-def p_curly_bracket_right(p):
-    ''' cbr : '}'
-            | empty '''
-    if p[1] != '}':
-        ERRORS.append( ( p.lineno(0), "Missing right curly bracket!" ) )
-
-def p_square_bracket_left(p):
-    ''' sbl : '['
-            | empty '''
-    if p[1] != '[':
-        ERRORS.append( ( p.lineno(0), "Missing left square bracket!" ) )
-
-def p_square_bracket_right(p):
-    ''' sbr : ']'
-            | empty '''
-    if p[1] != ']':
-        ERRORS.append( ( p.lineno(0), "Missing right square bracket!" ) )
-
-def p_semicolon(p):
-    ''' semicolon : ';'
-                  | empty '''
-    if p[1] != ';':
-        ERRORS.append( ( p.lineno(0), "Missing semicolon!" ) )
-
-def p_comma(p):
-    ''' comma : ','
-              | empty '''
-    if p[1] != ',':
-        ERRORS.append( ( p.lineno(0), "Missing comma!" ) )
-
-def p_equality(p):
-    ''' eq : '='
-           | empty '''
-    if p[1] != '=':
-        ERRORS.append( ( p.lineno(0), "Missing equality sign!" ) )
 
 ### Helpers ###
 
@@ -523,25 +846,36 @@ def p_empty(p):
 
 def p_error(t):
     print(t.lexpos)
-    print('Linenumber: ', t.lineno)
     print("Syntax error at '%s'" % t.value)
 
 import ply.yacc as yacc
 parser = yacc.yacc()
+print(ERRORS)
+'''data = \
+r"""int main(int a) {
+    if (a + b) {
+        a = 10.1324;
+        3 + 5;
+    }
+}
 
-test_file = open("test.txt", "r")
-
-data = test_file.read();
-print(data);
-code_lines = data.split('\n')
-test_file.close();
+int sum(int a, int b) {
+    for (i = 0; i < 4; i++)
+    {
+        printf("%d\n", sdf);
+        int a,b;
+    }
+}
+"""
+'''
+data = open('example_codes/input.txt', 'r').read()
 
 parser.parse(data, tracking=True)
 
 import json
-print("AST:")
 print(json.dumps(AST, indent=2))
-print("ERRORS:")
 print(json.dumps(ERRORS, indent=2))
 print(AST)
 print(ERRORS)
+
+
