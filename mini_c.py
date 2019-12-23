@@ -107,105 +107,25 @@ def p_function_body(p):
             'body' : p[7],
             }
 
-def p_function_body_error_1(p):
-    ''' function : error VARIABLE '(' arguments ')' '{' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Function type unrecognized!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': None,
-            'arguments': p[4],
-            'body' : p[7],
-            }
-
-def p_function_body_error_2(p):
-    ''' function : type_func error '(' arguments ')' '{' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Wrong function name!" ) )
-    p[0] = {
-            'function_name': None,
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[4],
-            'body' : p[7],
-            }
-
-def p_function_body_error_3(p):
-    ''' function : type_func VARIABLE arguments ')' '{' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Missing left paranthesis in function declaration!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[3],
-            'body' : p[6],
-            }
-
-def p_function_body_error_4(p):
-    ''' function : type_func VARIABLE '(' error ')' '{' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Incorrect arguments!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': None,
-            'body' : p[7],
-            }
-
-def p_function_body_error_5(p):
-    ''' function : type_func VARIABLE '(' arguments '{' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Missing right paranthesis in function declaration!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[4],
-            'body' : p[6],
-            }
-
-def p_function_body_error_6(p):
-    ''' function : type_func VARIABLE '(' arguments ')' body '}' '''
-    ERRORS.append( ( p.lineno(0), "Missing left curly bracket in function declaration!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[4],
-            'body' : p[6],
-            }
-
-def p_function_body_error_7(p):
-    ''' function : type_func VARIABLE '(' arguments ')' '{' error '}' '''
-    ERRORS.append( ( p.lineno(0), "Something wrong in the body of a function!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[4],
-            'body' : None,
-            }
-
-def p_function_body_error_8(p):
-    ''' function : type_func VARIABLE '(' arguments ')' '{' body '''
-    ERRORS.append( ( p.lineno(0), "Missing right curly bracket in function declaration!" ) )
-    p[0] = {
-            'function_name': p[2],
-            'span': p.linespan(0),
-            'return_type': p[1],
-            'arguments': p[4],
-            'body' : p[7],
-            }
+def p_argunments_rec(p):
+    ''' arguments : arguments_rec '''
+    p[0] = p[1]
 
 def p_argunments_names_one(p):
-    ''' arguments : type_var variable_or_pointer '''
+    ''' arguments_rec : type_var variable_or_pointer '''
     p[0] = [{ 'type': p[1], 'variable': p[2] }]
 
 def p_arguments_names_recursion(p):
-    ''' arguments : type_var variable_or_pointer ',' arguments '''
+    ''' arguments_rec : type_var variable_or_pointer ',' arguments_rec '''
     p[0] = [{ 'type': p[1], 'variable': p[2]}] + p[4]
 
 def p_arguments_void(p):
     ''' arguments : VOID_TYPE '''
     p[0] = [{ 'type': p[1] }]
+
+def p_arguments_empty(p):
+    ''' arguments : empty '''
+    p[0] = []
 
 ### Function body level ###
 
@@ -258,30 +178,10 @@ def p_line_printf(p):
     'line : printf_expr'
     p[0] = { 'span' : p.linespan(0), 'type': 'printf', 'value': p[1]}
 
-def p_line_error(p):
-    "line : error ';' "
-    ERRORS.append( ( p.lineno(0), "Unrecognized line type!" ) )
-    p[0] = { 'span' : p.linespan(0), 'type': None, 'value': None}
-
 ### Line expansions ###
 
 def p_declaration(p):
     '''declaration : type_var variable_list ';' '''
-    p[0] = { 'type' : p[1], 'variables': p[2] }
-
-def p_declaration_error_1(p):
-    '''declaration : error variable_list ';' '''
-    ERRORS.append( ( p.lineno(0), "Declaration type unrecognized!" ) )
-    p[0] = { 'type' : None, 'variables': p[2] }
-
-def p_declaration_error_2(p):
-    '''declaration : type_var error ';' '''
-    ERRORS.append( ( p.lineno(0), "declaration variable list is not recognized!" ) )
-    p[0] = { 'type' : p[1], 'variables': None }
-
-def p_declaration_error_3(p):
-    '''declaration : type_var variable_list '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in variable declaration!" ) )
     p[0] = { 'type' : p[1], 'variables': p[2] }
 
 def p_variable_list_one(p):
@@ -305,37 +205,6 @@ def p_assignment(p):
     '''
     p[0] = { 'variable' : p[1], 'expression': p[3] }
 
-def p_assignment_error_1(p):
-    '''
-    assignment : error '=' expr_1 ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
-    p[0] = { 'variable' : None, 'expression': p[3] }
-
-def p_assignment_error_2(p):
-    '''
-    assignment : variable_or_pointer expr_1 ';'
-               | array expr_1 ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
-    p[0] = { 'variable' : p[1], 'expression': p[2] }
-
-def p_assignment_error_3(p):
-    '''
-    assignment : variable_or_pointer '=' error ';'
-               | array '=' error ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Error in expression being assigned!" ) )
-    p[0] = { 'variable' : p[1], 'expression': None }
-
-def p_assignment_error_4(p):
-    '''
-    assignment : variable_or_pointer '=' expr_1
-               | array '=' expr_1
-    '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
-    p[0] = { 'variable' : p[1], 'expression': p[3] }
-
 def p_assignment_address(p):
     '''
     assignment : variable_or_pointer '=' '&' VARIABLE ';'
@@ -343,73 +212,17 @@ def p_assignment_address(p):
     '''
     p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
 
-def p_assignment_address_error_1(p):
-    '''
-    assignment : error '=' '&' VARIABLE ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
-    p[0] = { 'variable' : None, 'expression': ('&', p[4]) }
-
-def p_assignment_address_error_2(p):
-    '''
-    assignment : variable_or_pointer '&' VARIABLE ';'
-               | array '&' VARIABLE ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
-    p[0] = { 'variable' : p[1], 'expression': ('&', p[3]) }
-
-def p_assignment_address_error_3(p):
-    '''
-    assignment : variable_or_pointer '=' '&' error ';'
-               | array '=' '&' error ';'
-    '''
-    ERRORS.append( ( p.lineno(0), "Illegal assignment expression, you can only reference a variable!" ) )
-    p[0] = { 'variable' : p[1], 'expression': None }
-
-def p_assignment_address_error_4(p):
-    '''
-    assignment : variable_or_pointer '=' '&' VARIABLE
-               | array '=' '&' VARIABLE
-    '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
-    p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
-
 def p_return_expr(p):
     ''' return_expr : RETURN expr_1 ';' '''
-    p[0] = { 'expression': p[2] }
-
-def p_return_expr_error_1(p):
-    ''' return_expr : RETURN error ';' '''
-    ERRORS.append( ( p.lineno(0), "You can only return an expression!" ) )
-    p[0] = { 'expression': None }
-
-def p_return_expr_error_2(p):
-    ''' return_expr : RETURN expr_1 '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
     p[0] = { 'expression': p[2] }
 
 def p_return_expr_empty(p):
     ''' return_expr : RETURN ';' '''
     p[0] = { 'expression': None }
 
-def p_return_expr_empty_error_1(p):
-    ''' return_expr : RETURN '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
-    p[0] = { 'expression': None }
-
 def p_expr_line(p):
     ''' expr_line : expr_1 ';' '''
     p[0] = { 'expression': p[1] }
-
-def p_expr_line_error_1(p):
-    ''' expr_line : expr_1 '''
-    ERRORS.append( ( p.lineno(0), "Missing semicolon in expression statement!" ) )
-    p[0] = { 'expression': p[1] }
-
-def p_expr_line_error_2(p):
-    ''' expr_line : error ';' '''
-    ERRORS.append( ( p.lineno(0), "Wrong expression!" ) )
-    p[0] = { 'expression': None }
 
 def p_printf_expr_digit_float(p):
     '''
@@ -419,54 +232,6 @@ def p_printf_expr_digit_float(p):
 
     '''
     p[0] = p[3]
-
-def p_printf_expr_digit_float_error_1(p):
-    '''
-    printf_expr : error '(' STRING  ')' ';'
-                | error '(' digit ')' ';'
-                | error '(' float ')' ';'
-
-    '''
-    ERRORS.append((p.lineno(0), "Wrong function name!"))
-    p[0] = None
-
-def p_printf_expr_digit_float_error_2(p):
-    '''
-    printf_expr : PRINTF  STRING  ')' ';'
-                | PRINTF  digit ')' ';'
-                | PRINTF  float ')' ';'
-
-    '''
-    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
-    p[0] = None
-
-def p_printf_expr_digit_float_error_3(p):
-    '''
-    printf_expr : PRINTF '(' error  ')' ';'
-
-    '''
-    ERRORS.append((p.lineno(0), "Wrong printf input!"))
-    p[0] = None
-
-def p_printf_expr_digit_float_error_4(p):
-    '''
-    printf_expr : PRINTF '(' STRING  ';'
-                | PRINTF '(' digit  ';'
-                | PRINTF '(' float ';'
-
-    '''
-    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
-    p[0] = None
-
-def p_printf_expr_digit_float_error_5(p):
-    '''
-    printf_expr : PRINTF '(' STRING  ')'
-                | PRINTF '(' digit ')'
-                | PRINTF '(' float ')'
-
-    '''
-    ERRORS.append((p.lineno(0), "Missing semicolon!"))
-    p[0] = None
 
 def p_print_digit(p):
     '''
@@ -604,6 +369,287 @@ def p_if_only(p):
             'expression' : p[3],
             'body' : p[6],
             }
+
+### For loops ###
+
+def p_for_loop(p):
+    '''
+    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
+    '''
+    p[0] = {
+            'initialization' : p[3],
+            'condition' : p[4],
+            'operation' : p[6],
+            'body' : p[9]
+            }
+
+### Function call ###
+
+def p_function_call(p):
+    '''function_call : VARIABLE '(' arguments_call ')' '''
+    p[0] = { 'function_name': p[1], 'arguments': p[3] }
+
+def p_function_call_empty(p):
+    '''function_call : VARIABLE '(' ')' '''
+    p[0] = { 'function_name': p[1], 'arguments': [] }
+
+def p_arguments_names_call_one(p):
+    ''' arguments_call : expr_1 '''
+    p[0] = [{ 'expression': p[1]}]
+
+def p_arguments_names_call_recursion(p):
+    ''' arguments_call : expr_1 ',' arguments_call '''
+    p[0] = [{ 'expression': p[1]}] + p[3]
+
+### Arrays ###
+
+def p_array(p):
+    ''' array : VARIABLE '[' expr_1 ']' '''
+    p[0] = { 'array_name': p[1], 'index': p[3] }
+
+### Types ###
+
+def p_type_func(p):
+    ''' type_func : INT_TYPE
+                  | FLOAT_TYPE
+                  | VOID_TYPE '''
+    p[0] = p[1]
+
+def p_type_var(p):
+    ''' type_var  : INT_TYPE
+                  | FLOAT_TYPE '''
+    p[0] = p[1]
+
+### Error handlers ###
+
+def p_line_error(p):
+    "line : error ';' "
+    ERRORS.append( ( p.lineno(0), "Unrecognized line type!" ) )
+    p[0] = { 'span' : p.linespan(0), 'type': None, 'value': None}
+
+def p_function_body_error_1(p):
+    ''' function : error VARIABLE '(' arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Function type unrecognized!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': None,
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_function_body_error_2(p):
+    ''' function : type_func error '(' arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Wrong function name!" ) )
+    p[0] = {
+            'function_name': None,
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_function_body_error_3(p):
+    ''' function : type_func VARIABLE arguments ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing left paranthesis in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[3],
+            'body' : p[6],
+            }
+
+def p_function_body_error_4(p):
+    ''' function : type_func VARIABLE '(' error ')' '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Incorrect arguments!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': None,
+            'body' : p[7],
+            }
+
+def p_function_body_error_5(p):
+    ''' function : type_func VARIABLE '(' arguments '{' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing right paranthesis in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[6],
+            }
+
+def p_function_body_error_6(p):
+    ''' function : type_func VARIABLE '(' arguments ')' body '}' '''
+    ERRORS.append( ( p.lineno(0), "Missing left curly bracket in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[6],
+            }
+
+def p_function_body_error_7(p):
+    ''' function : type_func VARIABLE '(' arguments ')' '{' error '}' '''
+    ERRORS.append( ( p.lineno(0), "Something wrong in the body of a function!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : None,
+            }
+
+def p_function_body_error_8(p):
+    ''' function : type_func VARIABLE '(' arguments ')' '{' body '''
+    ERRORS.append( ( p.lineno(0), "Missing right curly bracket in function declaration!" ) )
+    p[0] = {
+            'function_name': p[2],
+            'span': p.linespan(0),
+            'return_type': p[1],
+            'arguments': p[4],
+            'body' : p[7],
+            }
+
+def p_assignment_error_1(p):
+    '''
+    assignment : error '=' expr_1 ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
+    p[0] = { 'variable' : None, 'expression': p[3] }
+
+def p_assignment_error_2(p):
+    '''
+    assignment : variable_or_pointer expr_1 ';'
+               | array expr_1 ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': p[2] }
+
+def p_assignment_error_3(p):
+    '''
+    assignment : variable_or_pointer '=' error ';'
+               | array '=' error ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Error in expression being assigned!" ) )
+    p[0] = { 'variable' : p[1], 'expression': None }
+
+def p_assignment_error_4(p):
+    '''
+    assignment : variable_or_pointer '=' expr_1
+               | array '=' expr_1
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': p[3] }
+
+def p_assignment_address_error_1(p):
+    '''
+    assignment : error '=' '&' VARIABLE ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Error in assignment: variable not recognized!" ) )
+    p[0] = { 'variable' : None, 'expression': ('&', p[4]) }
+
+def p_assignment_address_error_2(p):
+    '''
+    assignment : variable_or_pointer '&' VARIABLE ';'
+               | array '&' VARIABLE ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing '=' sign in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[3]) }
+
+def p_assignment_address_error_3(p):
+    '''
+    assignment : variable_or_pointer '=' '&' error ';'
+               | array '=' '&' error ';'
+    '''
+    ERRORS.append( ( p.lineno(0), "Illegal assignment expression, you can only reference a variable!" ) )
+    p[0] = { 'variable' : p[1], 'expression': None }
+
+def p_assignment_address_error_4(p):
+    '''
+    assignment : variable_or_pointer '=' '&' VARIABLE
+               | array '=' '&' VARIABLE
+    '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in assignment!" ) )
+    p[0] = { 'variable' : p[1], 'expression': ('&', p[4]) }
+
+def p_return_expr_error_1(p):
+    ''' return_expr : RETURN error ';' '''
+    ERRORS.append( ( p.lineno(0), "You can only return an expression!" ) )
+    p[0] = { 'expression': None }
+
+def p_return_expr_error_2(p):
+    ''' return_expr : RETURN expr_1 '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
+    p[0] = { 'expression': p[2] }
+
+def p_return_expr_empty_error_1(p):
+    ''' return_expr : RETURN '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in return statement!" ) )
+    p[0] = { 'expression': None }
+
+def p_expr_line_error_1(p):
+    ''' expr_line : expr_1 '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in expression statement!" ) )
+    p[0] = { 'expression': p[1] }
+
+def p_expr_line_error_2(p):
+    ''' expr_line : error ';' '''
+    ERRORS.append( ( p.lineno(0), "Wrong expression!" ) )
+    p[0] = { 'expression': None }
+
+def p_printf_expr_digit_float_error_1(p):
+    '''
+    printf_expr : error '(' STRING  ')' ';'
+                | error '(' digit ')' ';'
+                | error '(' float ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Wrong function name!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_2(p):
+    '''
+    printf_expr : PRINTF  STRING  ')' ';'
+                | PRINTF  digit ')' ';'
+                | PRINTF  float ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_3(p):
+    '''
+    printf_expr : PRINTF '(' error  ')' ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Wrong printf input!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_4(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ';'
+                | PRINTF '(' digit  ';'
+                | PRINTF '(' float ';'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
+    p[0] = None
+
+def p_printf_expr_digit_float_error_5(p):
+    '''
+    printf_expr : PRINTF '(' STRING  ')'
+                | PRINTF '(' digit ')'
+                | PRINTF '(' float ')'
+
+    '''
+    ERRORS.append((p.lineno(0), "Missing semicolon!"))
+    p[0] = None
+
 def p_if_only_error_1(p):
     '''
     if_clause : error '(' expr_1 ')' '{' body '}'
@@ -673,18 +719,7 @@ def p_if_only_error_7(p):
             'expression' : p[3],
             'body' : p[6],
             }
-### For loops ###
 
-def p_for_loop(p):
-    '''
-    for_loop : FOR '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
-    '''
-    p[0] = {
-            'initialization' : p[3],
-            'condition' : p[4],
-            'operation' : p[6],
-            'body' : p[9]
-            }
 def p_for_loop_error_1(p):
     '''
     for_loop : error '(' assignment expr_1 ';' expr_1 ')' '{' body '}'
@@ -805,38 +840,21 @@ def p_for_loop_error_10(p):
             'body' : p[9]
             }
 
-### Function call ###
+def p_declaration_error_1(p):
+    '''declaration : error variable_list ';' '''
+    ERRORS.append( ( p.lineno(0), "Declaration type unrecognized!" ) )
+    p[0] = { 'type' : None, 'variables': p[2] }
 
-def p_function_call(p):
-    '''function_call : VARIABLE '(' arguments_call ')' '''
-    p[0] = { 'function_name': p[1], 'arguments': p[3] }
+def p_declaration_error_2(p):
+    '''declaration : type_var error ';' '''
+    ERRORS.append( ( p.lineno(0), "declaration variable list is not recognized!" ) )
+    p[0] = { 'type' : p[1], 'variables': None }
 
-def p_arguments_names_call_one(p):
-    ''' arguments_call : empty '''
-    p[0] = []
+def p_declaration_error_3(p):
+    '''declaration : type_var variable_list '''
+    ERRORS.append( ( p.lineno(0), "Missing semicolon in variable declaration!" ) )
+    p[0] = { 'type' : p[1], 'variables': p[2] }
 
-def p_arguments_names_call_recursion(p):
-    ''' arguments_call : expr_1 ',' arguments_call '''
-    p[0] = [{ 'expression': p[1]}] + p[3]
-
-### Arrays ###
-
-def p_array(p):
-    ''' array : VARIABLE '[' expr_1 ']' '''
-    p[0] = { 'array_name': p[1], 'index': p[3] }
-
-### Types ###
-
-def p_type_func(p):
-    ''' type_func : INT_TYPE
-                  | FLOAT_TYPE
-                  | VOID_TYPE '''
-    p[0] = p[1]
-
-def p_type_var(p):
-    ''' type_var  : INT_TYPE
-                  | FLOAT_TYPE '''
-    p[0] = p[1]
 
 ### Helpers ###
 
