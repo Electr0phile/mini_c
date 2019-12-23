@@ -1,9 +1,10 @@
 import json
 import inspect
-from mini_c import AST
-from mini_c import code_lines
+from parser import parse
 #import sys
 #sys.setrecursionlimit(10000)
+
+AST, ERRORS, code_lines = parse()
 
 function_table = {} # Str->Function
 symbol_table = {} #Str -> Addr
@@ -703,8 +704,8 @@ def get_user_input():
 	# print('Return node stack', return_node_stack);	
 	global next_cnt;
 	if current_linenode != None:
-		pass
-		# print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
+		#pass
+		print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
 	else:
 		print('End of program')
 		next_cnt = 0;

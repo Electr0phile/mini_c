@@ -1,3 +1,5 @@
+import ply.lex as lex
+import ply.yacc as yacc
 # Tokens
 
 t_INTEGER   = r'\d+'
@@ -63,7 +65,6 @@ def t_error(t):
 
 # Build lexer
 
-import ply.lex as lex
 lexer = lex.lex()
 
 # Parsing rules
@@ -866,25 +867,25 @@ def p_error(t):
     print(t.lexpos)
     print("Syntax error at '%s'" % t.value)
 
-import ply.yacc as yacc
-parser = yacc.yacc()
+def parse():
+    parser = yacc.yacc()
+    test_file = open("input.txt", "r")
 
-test_file = open("test.txt", "r")
+    data = test_file.read();
+    #print(data);
+    code_lines = data.split('\n')
+    test_file.close();
+    parser.parse(data, tracking=True)
+    return AST, ERRORS, code_lines
 
-data = test_file.read();
-print(data);
-code_lines = data.split('\n')
-test_file.close();
-
-parser.parse(data, tracking=True)
-
-import json
-print("AST:")
-print(json.dumps(AST, indent=2))
-print("ERRORS:")
-print(json.dumps(ERRORS, indent=2))
-print(AST)
-print(ERRORS)
-
+    """
+    import json
+    print("AST:")
+    print(json.dumps(AST, indent=2))
+    print("ERRORS:")
+    print(json.dumps(ERRORS, indent=2))
+    print(AST)
+    print(ERRORS)
+    """
 
 
