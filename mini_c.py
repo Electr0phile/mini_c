@@ -812,8 +812,8 @@ def p_function_call(p):
     p[0] = { 'function_name': p[1], 'arguments': p[3] }
 
 def p_arguments_names_call_one(p):
-    ''' arguments_call : expr_1 '''
-    p[0] = [{ 'expression': p[1] }]
+    ''' arguments_call : empty '''
+    p[0] = []
 
 def p_arguments_names_call_recursion(p):
     ''' arguments_call : expr_1 ',' arguments_call '''
