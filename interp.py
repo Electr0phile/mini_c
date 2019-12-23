@@ -681,18 +681,16 @@ def get_user_input():
 	user_cmd = user_inp.split();
 	if len(user_cmd) == 0:
 		return get_user_input();
-	elif user_cmd[0] == 'print' or user_cmd[0] == 'p' or user_cmd[0] == 'trace' or user_cmd[0] == 't':
-		while user_cmd[0] == 'print' or user_cmd[0] == 'p' or user_cmd[0] == 'trace' or user_cmd[0] == 't':
-			if len(user_cmd) <= 1:
-				print("Command needs one parameter");
-			else:
-				if user_cmd[0] == 'print' or user_cmd[0] == 'p':
-					print(lookup_value(user_cmd[1]))
-				elif user_cmd[0] == 'trace' or user_cmd[0] == 't':
-					print(trace(user_cmd[1]), end = '')
-			user_inp = input().strip();
-			user_cmd = user_inp.split();
-	elif user_cmd[0] == 'next' or user_cmd[0] == 'n':
+	elif user_cmd[0] in ['print', 'p', 'trace', 't']:
+		if len(user_cmd) <= 1:
+			print("Command needs one parameter");
+		else:
+			if user_cmd[0] == 'print' or user_cmd[0] == 'p':
+				print(lookup_value(user_cmd[1]))
+			elif user_cmd[0] == 'trace' or user_cmd[0] == 't':
+				print(trace(user_cmd[1]), end = '')
+		get_user_input()
+	elif user_cmd[0] in ['next', 'n']:
 		#global next_cnt
 		next_cnt = 1;
 		if len(user_cmd) > 1:
@@ -724,7 +722,7 @@ def get_user_input():
 		exit()
 	else:
 		global no_of_invalid_commands
-		if (no_of_invalid_commands > 2):
+		if (no_of_invalid_commands >= 2):
 			print(available_commands)
 			no_of_invalid_commands = 0
 		else:
