@@ -2,6 +2,8 @@ import json
 import inspect
 from mini_c import AST
 from mini_c import code_lines
+#import sys
+#sys.setrecursionlimit(10000)
 
 function_table = {} # Str->Function
 symbol_table = {} #Str -> Addr
@@ -72,6 +74,7 @@ class Assignment:
 		global current_linenode
 		assignment_linenode = current_linenode;
 		if isinstance(self.var, tuple): # not arrays
+			# print('Assigning to', self.var[1], end = ': ');
 			if self.var[1] not in symbol_table:
 				not_declared_error(self.var[1])
 				run_time_error('Assignment to undeclared variable\n');
@@ -79,11 +82,15 @@ class Assignment:
 				if self.var[0] == None:#regular case, not a pointer
 					eval_res = evaluate(self.expr)
 					eval_res = typecast(history_table[self.var[1]][0][2], eval_res);
+					# print(eval_res)
 					memory_table[symbol_table[self.var[1]]] = eval_res
 					history_table[self.var[1]].append((eval_res, assignment_linenode.lineno))
 				else:#pointer case with a star in front of it
 					eval_res = evaluate(self.expr)
-					pointer_val = memory_table[symbol_table[self.var[1]]]	
+					#pointer_val = memory_table[symbol_table[self.var[1]]]
+					pointer_val = lookup_value(self.var[1])	
+					if isinstance(pointer_val, Array):
+						pointer_val = Pointer(pointer_val.startAddress)
 					if isinstance(pointer_val, Pointer) and pointer_val.addr != None and pointer_val.addr < len(memory_table): 
 						memory_table[pointer_val.addr] = eval_res
 					else:
@@ -92,7 +99,8 @@ class Assignment:
 						else:
 							not_a_pointer_error(self.var[1])
 		if isinstance(self.var, dict): # when it is an array
-			array = symbol_table[self.var['array_name']]
+			array = lookup_value(self.var['array_name'])
+			#array = symbol_table[self.var['array_name']]
 			index = evaluate(get_expression(self.var['index']))
 			if (index >= 0 and index < array.length and int(index) == index):
 				eval_res = typecast(array.arrayType, evaluate(self.expr));
@@ -101,6 +109,7 @@ class Assignment:
 				run_time_error("Illegal array index, index = " + str(index) + ", the size is " + str(array.length))
 
 		current_linenode = assignment_linenode
+		# print("Calling get_to_next_linenode from assignment")
 		get_to_next_linenode()
 
 class PrintfStatement:
@@ -110,7 +119,7 @@ class PrintfStatement:
 	def process(self):
 		cur_str = ''
 		#print(self.val);
-		print(self.printf_type);
+		# print(self.printf_type);
 		if self.printf_type == 'str':
 			i = 1;
 			while i < len(self.val) - 1:
@@ -217,7 +226,7 @@ class ReturnStatement:
 	def process(self):
 		global rax, symbol_table, memory_table, history_table
 		rax = evaluate(self.expr)
-		#print('Rax:', rax);
+		# print('Rax:', rax);
 		#print('Scope stack before:', scope_stack);
 		while len(scope_stack) and scope_stack[-1] == 1:
 			symbol_table_stack.pop()
@@ -299,7 +308,7 @@ class ForLoop:
 		return "ForLoop"
 
 	def process(self):
-		global current_linenode
+		global current_linenode, symbol_table
 		for_loop_linenode = current_linenode;
 		#if not self.visited:
 		if self.firstEntry:
@@ -323,6 +332,13 @@ class ForLoop:
 			current_linenode = self.body[0];
 		else:
 			current_linenode = for_loop_linenode;
+			self.firstEntry = True
+			if self.visited:
+				self.visited = False
+				self.firstEntry = True
+				scope_stack.pop()
+				symbol_table = symbol_table_stack.pop()
+				revert_history_table();	
 			get_to_next_linenode()
 
 
@@ -330,6 +346,8 @@ class ForLoop:
 def lookup_value(var):
 	#print("looking up:", expr, symbol_table)
 	if var in symbol_table:
+		if isinstance(symbol_table[var], Array):
+			return symbol_table[var]
 		return memory_table[symbol_table[var]]
 	else:
 		return not_declared_error(var);
@@ -345,6 +363,8 @@ def trace(var):
 
 #dereference pointer
 def deref_pointer(pointer, var):
+	if isinstance(pointer, Array):
+		pointer = Pointer(pointer.startAddress)
 	if isinstance(pointer, Pointer) and pointer.addr != None and pointer.addr < len(memory_table): 
 		return memory_table[pointer.addr]
 	else:
@@ -357,6 +377,8 @@ def deref_pointer(pointer, var):
 #get addr of a variable
 def get_var_address(var):
 	if var in symbol_table:
+		if isinstance(symbol_table[var], Array):
+			return (symbol_table[var]).startAddress
 		return symbol_table[var]
 	else:
  		#not_declared_error(var)
@@ -437,10 +459,25 @@ def evaluate(expr):
 	
 	if isinstance(expr, dict): # array indexing
 		array = symbol_table[expr['array_name']]
+		if isinstance(array, int):
+			array = memory_table[array]
 		index = evaluate(get_expression(expr['index']))
-		if (int(index) == index and 0 <= index < array.length):
-			return memory_table[array.startAddress + int(index)]
+		mxsize = 0;
+		addr = 0;
+		# print(array);
+		if isinstance(array, Array):
+			# print('it was an array')
+			addr = array.startAddress + int(index)
+			mxsize = array.startAddress + array.length
+		if isinstance(array, Pointer):
+			# print('it is a pointer')
+			addr = array.addr + index
+			mxsize = len(memory_table)
+
+		if (int(index) == index and 0 <= addr < mxsize):
+			return memory_table[addr]
 		else:
+			# print(mxsize, index);
 			run_time_error("Illegal array index, index = " + str(index) + ", the size is " + str(array.length))
 	
 	if isinstance(expr, FunctionCall):
@@ -448,7 +485,11 @@ def evaluate(expr):
 			return_node_stack.append(current_linenode.next);
 			#print('SAVED TO RETURN STACK:', current_linenode.next);
 		scope_stack.append(expr.name)
-		current_function = function_table[expr.name]
+		current_function = None;
+		if expr.name in function_table:
+			current_function = function_table[expr.name]
+		else:
+			run_time_error("Undeclared reference to function " + '"' + expr.name + '"')
 		#print('First line of the function', expr.name, current_linenode);
 		symbol_table_stack.append(symbol_table.copy())
 		history_table_stack.append(history_table.copy())
@@ -459,7 +500,9 @@ def evaluate(expr):
 		for argexpr in expr.arguments:
 			#temp_symbol_table[current_function.arguments[i]['variable'][1]] = 
 			eval_res = evaluate(argexpr)
-			var = current_function.arguments[i]['variable']
+			if isinstance(eval_res, Array):
+				eval_res = eval_res.startAddress
+			var = current_function.arguments[i]['variable'] 
 			vartype = current_function.arguments[i]['type']
 			temp_symbol_table[var[1]] = len(memory_table);
 			eval_res = typecast(vartype, eval_res)
@@ -485,7 +528,13 @@ def evaluate(expr):
 		if op != None:
 			#print('Evaluation with operation:', op);
 			if op == '+':
-				return evaluate(expr.left) + evaluate(expr.right);
+				#print("Evaluating plus operator")
+				#print(expr.left, expr.right)
+				l = evaluate(expr.left);
+				r = evaluate(expr.right)
+				#print(l, r)
+				#return evaluate(expr.left) + evaluate(expr.right);
+				return l + r
 			if op == '-':
 				return evaluate(expr.left) - evaluate(expr.right);
 			if op == '*':
@@ -502,11 +551,11 @@ def evaluate(expr):
 			if op == '==':
 				return evaluate(expr.left) == evaluate(expr.right)
 			elif op == '++':
-				#print ("evaluting the ++ operation on the variable", expr.left.left)
-				#print (history_table)
-				#print ("the value to be assigned is ", evaluate(Expression ('+', expr.left.left, "1")))
+				# print ("evaluting the ++ operation on the variable", expr.left.left)
+				# print (history_table)
+				# print ("the value to be assigned is ", evaluate(Expression ('+', expr.left.left, "1")))
 				Assignment(expr.left.left, Expression('+', expr.left.left, "1")).process()
-				#print("Increment complete")
+				# print("Increment complete")
 
 		if op == None:
 			return evaluate(expr.left);			
@@ -621,13 +670,6 @@ def get_to_next_linenode(isReturn = False):
 		else:
 			current_linenode = return_node_stack.pop();		
 			return
-	if isinstance(current_linenode.optype, ForLoop):#exiting for loop case, need to change symbol_table
-		if current_linenode.optype.visited:
-			current_linenode.optype.visited = False
-			scope_stack.pop();
-			#global symbol_table
-			symbol_table = symbol_table_stack.pop();
-			revert_history_table();	
 	if current_linenode.next != None:
 		#print(current_linenode)
 		current_linenode = current_linenode.next
@@ -661,7 +703,8 @@ def get_user_input():
 	# print('Return node stack', return_node_stack);	
 	global next_cnt;
 	if current_linenode != None:
-		print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
+		pass
+		# print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
 	else:
 		print('End of program')
 		next_cnt = 0;
@@ -709,7 +752,7 @@ def get_user_input():
 				#print('symbol_table', symbol_table)
 				return get_user_input();
 			if isinstance(current_linenode.optype, ReturnStatement):
-				#print('IT IS A RETURN STATEMENT', current_linenode);
+				# print('IT IS A RETURN STATEMENT', current_linenode);
 				return interpreter();
 			#else:
 			#	interpreter();
@@ -741,8 +784,10 @@ def interpreter():
 	#print(isReturn)
 	#print(current_linenode);
 	current_linenode.optype.process();
-	#print('Return_node_stack:', return_node_stack);
+	# print('Return_node_stack:', return_node_stack);
+	# print('isReturn', isReturn);
 	if isReturn:
+		# print("returning", rax)
 		return rax;
 	
 	
