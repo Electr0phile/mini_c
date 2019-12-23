@@ -14,8 +14,18 @@ return_node_stack = [] #stack of nodes, used for implementing function call and 
 memory_table_stack = [] #will store the size of memory_table before function calls, so that we clear unnecessary memory after a function call 
 scope_stack = [] 		#needed for implementing scopes, it basically stores which function was called
 rax = 0 #function return values stored here
+no_of_invalid_commands = 0
 current_linenode = None
 
+
+available_commands = "\
+   ************************************************************\n\
+	Commands       Parameter           Description\n\
+	print | p         v           prints the current value of v\n\
+	trace | t         v           prints the value history of v\n\
+	next  | n        -|n          executes the current line or next n lines \n\
+	help  | h         -           prints this message\n\
+	quit  | q         -           exits the debugger\n"
 
 def run_time_error(str):
 	print ("Error!!!! ", str)
@@ -670,8 +680,8 @@ def get_user_input():
 	user_inp = input().strip();
 	user_cmd = user_inp.split();
 	if len(user_cmd) == 0:
-		return;
-	if user_cmd[0] == 'print' or user_cmd[0] == 'p' or user_cmd[0] == 'trace' or user_cmd[0] == 't':
+		return get_user_input();
+	elif user_cmd[0] == 'print' or user_cmd[0] == 'p' or user_cmd[0] == 'trace' or user_cmd[0] == 't':
 		while user_cmd[0] == 'print' or user_cmd[0] == 'p' or user_cmd[0] == 'trace' or user_cmd[0] == 't':
 			if len(user_cmd) <= 1:
 				print("Command needs one parameter");
@@ -682,7 +692,7 @@ def get_user_input():
 					print(trace(user_cmd[1]), end = '')
 			user_inp = input().strip();
 			user_cmd = user_inp.split();
-	if user_cmd[0] == 'next' or user_cmd[0] == 'n':
+	elif user_cmd[0] == 'next' or user_cmd[0] == 'n':
 		#global next_cnt
 		next_cnt = 1;
 		if len(user_cmd) > 1:
@@ -707,6 +717,19 @@ def get_user_input():
 			#	interpreter();
 			#current_linenode.optype.process();
 			# get_to_next_linenode();
+	elif (user_cmd[0] in ["help", "h"]):
+		print(available_commands)
+	elif (user_cmd[0] in ["quit", "q", "exit"]):
+		print("Exiting debugger")
+		exit()
+	else:
+		global no_of_invalid_commands
+		if (no_of_invalid_commands > 2):
+			print(available_commands)
+			no_of_invalid_commands = 0
+		else:
+			no_of_invalid_commands+=1
+			get_user_input()
 			
 
 def interpreter():

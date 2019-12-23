@@ -850,32 +850,23 @@ def p_error(t):
 
 import ply.yacc as yacc
 parser = yacc.yacc()
-print(ERRORS)
-'''data = \
-r"""int main(int a) {
-    if (a + b) {
-        a = 10.1324;
-        3 + 5;
-    }
-}
 
-int sum(int a, int b) {
-    for (i = 0; i < 4; i++)
-    {
-        printf("%d\n", sdf);
-        int a,b;
-    }
-}
-"""
-'''
-data = open('example_codes/input.txt', 'r').read()
+test_file = open("test.txt", "r")
+
+data = test_file.read();
+print(data);
+code_lines = data.split('\n')
+test_file.close();
 
 parser.parse(data, tracking=True)
 
 import json
+print("AST:")
 print(json.dumps(AST, indent=2))
+print("ERRORS:")
 print(json.dumps(ERRORS, indent=2))
 print(AST)
 print(ERRORS)
+
 
 

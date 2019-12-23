@@ -28,5 +28,6 @@ int main (void) {
 	int a, *kek, b;
 	a = 15/2;
 	a = factorial(sum(2, sum(2, 1)));
+	printf("something is not right");
 }
 
