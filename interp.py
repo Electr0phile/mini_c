@@ -19,6 +19,7 @@ scope_stack = [] 		#needed for implementing scopes, it basically stores which fu
 rax = 0 #function return values stored here
 no_of_invalid_commands = 0
 current_linenode = None
+show_line_info = ''
 
 
 available_commands = "\
@@ -761,8 +762,10 @@ def get_user_input():
 	global next_cnt;
 	endcheck = False;
 	if current_linenode != None:
-		# pass
-		print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
+		if show_line_info == 'n':
+			pass
+		else:
+			print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
 	else:
 		print('End of program');
 		endcheck = True
@@ -858,7 +861,9 @@ def interpreter():
 	
 
 def start_interpreter():
-	global current_linenode, symbol_table
+	global current_linenode, symbol_table, show_line_info
+	while (not show_line_info in ['y', 'n']):
+		show_line_info = input("Do you want to see the line which is to be executed?\nFor example: Line 3: float total;\nenter 'y' for yes or 'n' for no\n")
 	print(available_commands)
 	while current_linenode != None:
 		get_user_input();
