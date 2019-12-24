@@ -1,6 +1,6 @@
 import json
 import inspect
-from parser import parse
+from minicparser import parse
 #import sys
 #sys.setrecursionlimit(10000)
 
@@ -648,6 +648,10 @@ def function_walk(name):
 		start = start.next
 
 def init_interpreter():
+	if ERRORS:
+		for error in ERRORS:
+			print("Syntax error on line", error[0], ':' + error[1]) 
+		exit()
 	for i in range(len(AST)):
 		init_function(AST[i]);
 	global current_linenode;
@@ -704,7 +708,7 @@ def get_user_input():
 	# print('Return node stack', return_node_stack);	
 	global next_cnt;
 	if current_linenode != None:
-		#pass
+		# pass
 		print('Line '+ str(current_linenode.lineno) + ':' + code_lines[current_linenode.lineno - 1])
 	else:
 		print('End of program')
@@ -795,6 +799,7 @@ def interpreter():
 
 def start_interpreter():
 	global current_linenode, symbol_table
+	print(available_commands)
 	while current_linenode != None:
 		get_user_input();
 		
