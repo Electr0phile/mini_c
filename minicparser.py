@@ -864,11 +864,10 @@ def p_empty(p):
     pass
 
 def p_error(t):
-    print(t.lexpos)
-    print("Syntax error at '%s'" % t.value)
+    pass
 
 def parse():
-    parser = yacc.yacc()
+    parser = yacc.yacc(errorlog=yacc.NullLogger())
     test_file = open("input.txt", "r")
 
     data = test_file.read();
