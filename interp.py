@@ -428,12 +428,15 @@ def is_string(expr):
 	return type(expr) == type('')
 
 def typecast(vartype, val):
+	print("casting from ", str(vartype), " to ", str(val))
 	if isinstance(val, Pointer):
 		return val;
 	if vartype == 'int':
 		return int(val)
 	if vartype == 'float':
 		return float(val)
+	else:
+		return "error"
 
 
 
@@ -479,7 +482,7 @@ def evaluate(expr):
 			return memory_table[addr]
 		else:
 			# print(mxsize, index);
-			run_time_error("Illegal array index, index = " + str(index) + ", the size is " + str(array.length))
+			run_time_error("Illegal array index, index = " + str(index))
 	
 	if isinstance(expr, FunctionCall):
 		if current_linenode != None:
@@ -498,6 +501,10 @@ def evaluate(expr):
 		temp_symbol_table = {}
 		temp_history_table = {}
 		i = 0;
+
+		if (len(expr.arguments) != len(current_function.arguments)):
+			run_time_error("Incorrect number of arguments for function " + current_function.name + " expected " + str(len(current_function.arguments)) + " but got " + str(len(expr.arguments)))
+
 		for argexpr in expr.arguments:
 			#temp_symbol_table[current_function.arguments[i]['variable'][1]] = 
 			eval_res = evaluate(argexpr)
@@ -653,6 +660,7 @@ def init_interpreter():
 			print("Syntax error on line", error[0], ':' + error[1]) 
 		exit()
 	for i in range(len(AST)):
+		print(AST[i])
 		init_function(AST[i]);
 	global current_linenode;
 	current_linenode = function_table['main'].start;
