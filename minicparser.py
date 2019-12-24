@@ -797,7 +797,7 @@ def p_for_loop_error_7(p):
     '''
     for_loop : FOR '(' assignment expr_1 ';' expr_1  '{' body '}'
     '''
-    ERRORS.append((p.lineno(0), "Missing left paranthesis!"))
+    ERRORS.append((p.lineno(0), "Missing right paranthesis!"))
     p[0] = {
             'initialization' : p[3],
             'condition' : p[4],
