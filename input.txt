@@ -13,9 +13,10 @@ int main(void) {
 	int count, i, total;
 	int record[5];
 	float average;
+
 	count = 5;
 	total = 0;
-	a = kek();
+
 	for(i = 0; i < count; i++) {
 		record[i] = i * 1;
 		printf("value : ");
